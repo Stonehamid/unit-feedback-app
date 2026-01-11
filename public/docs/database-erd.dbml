@@ -1,0 +1,51 @@
+Table units {
+  id int [pk, increment]
+  name varchar(255)
+  officer_name varchar(255)
+  type varchar(255)
+  description text
+  location varchar(255)
+  photo varchar(255)
+  avg_rating decimal
+  created_at datetime
+  updated_at datetime
+}
+
+Table ratings {
+  id int [pk, increment]
+  unit_id int [ref: > units.id]
+  reviewer_name varchar(255)
+  rating int
+  comment text
+  created_at datetime
+  updated_at datetime
+}
+
+Table messages {
+  id int [pk, increment]
+  unit_id int [ref: > units.id]
+  name varchar(255)
+  message text
+  created_at datetime
+  updated_at datetime
+}
+
+Table users {
+  id int [pk, increment]
+  name varchar(255)
+  role varchar(255)
+  email varchar(255)
+  created_at datetime
+  updated_at datetime
+}
+
+Table reports {
+  id int [pk, increment]
+  admin_id int [ref: > users.id]
+  unit_id int [ref: > units.id]
+  title varchar(255)
+  content text
+  created_at datetime
+  updated_at datetime
+}
+
