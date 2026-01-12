@@ -17,7 +17,7 @@ class Report extends Model
     ];
 
     /**
-     * Relasi banyak-ke-satu ke tabel users (sebagai admin).
+     * Get the admin who created the report
      */
     public function admin()
     {
@@ -25,10 +25,27 @@ class Report extends Model
     }
 
     /**
-     * Relasi banyak-ke-satu ke tabel units.
+     * Get the unit that the report is about
      */
     public function unit()
     {
         return $this->belongsTo(Unit::class);
+    }
+
+    /**
+     * Scope untuk laporan bulan ini
+     */
+    public function scopeThisMonth($query)
+    {
+        return $query->whereMonth('created_at', now()->month)
+                     ->whereYear('created_at', now()->year);
+    }
+
+    /**
+     * Scope untuk laporan berdasarkan unit
+     */
+    public function scopeByUnit($query, $unitId)
+    {
+        return $query->where('unit_id', $unitId);
     }
 }

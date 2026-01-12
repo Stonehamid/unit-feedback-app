@@ -8,32 +8,62 @@ use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\ReportController;
 
-// Public Routes
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+|
+| Main API routes for mobile apps, frontend SPA, or third-party integrations.
+| All API responses are automatically formatted by ApiResponseFormatter middleware.
+|
+*/
+
+// =========================================================================
+// PUBLIC ROUTES - No authentication required
+// =========================================================================
+
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-// Protected Routes (membutuhkan token)
-Route::middleware('auth:sanctum')->group(function () {
+Route::get('units', [UnitController::class, 'index']);
+Route::get('units/{unit}', [UnitController::class, 'show']);
+
+// =========================================================================
+// PROTECTED ROUTES - Sanctum token authentication required
+// =========================================================================
+
+Route::middleware(['auth:sanctum', 'api.format'])->group(function () {
     
-    // Auth Routes
+    // Authentication routes
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
-
-    // Unit Routes (hanya admin yang bisa create/update/delete)
-    Route::apiResource('units', UnitController::class)->except(['index', 'show'])->middleware('admin.only');
-    Route::get('units', [UnitController::class, 'index']); // Publik bisa lihat daftar unit
-    Route::get('units/{unit}', [UnitController::class, 'show']); // Publik bisa lihat detail unit
-
-    // Rating Routes (reviewer atau admin yang bisa create)
-    Route::post('units/{unit}/ratings', [RatingController::class, 'store'])->middleware('reviewer.only');
-    Route::delete('ratings/{rating}', [RatingController::class, 'destroy'])->middleware('admin.only');
-
-    // Message Routes (Publik bisa kirim, admin hapus)
-    Route::post('units/{unit}/messages', [MessageController::class, 'store']); // Bisa dibuka publik
-    Route::delete('messages/{message}', [MessageController::class, 'destroy'])->middleware('admin.only');
-
-    // Report Routes (hanya admin)
-    Route::apiResource('reports', ReportController::class)->middleware('admin.only');
+    
+    // Admin-only routes
+    Route::middleware('admin.only')->group(function () {
+        Route::post('units', [UnitController::class, 'store']);
+        Route::put('units/{unit}', [UnitController::class, 'update']);
+        Route::patch('units/{unit}', [UnitController::class, 'update']);
+        Route::delete('units/{unit}', [UnitController::class, 'destroy']);
+        
+        Route::delete('ratings/{rating}', [RatingController::class, 'destroy']);
+        Route::delete('messages/{message}', [MessageController::class, 'destroy']);
+        
+        Route::apiResource('reports', ReportController::class);
+    });
+    
+    // Reviewer-only routes
+    Route::middleware('reviewer.only')->group(function () {
+        Route::post('units/{unit}/ratings', [RatingController::class, 'store']);
+    });
+    
+    // Mixed permission routes
+    Route::post('units/{unit}/messages', [MessageController::class, 'store']);
+    
+    // Reviewer + Admin routes
+    Route::middleware('reviewer.access')->group(function () {
+        Route::get('my-ratings', [RatingController::class, 'myRatings']);
+        Route::get('my-messages', [MessageController::class, 'myMessages']);
+    });
 });

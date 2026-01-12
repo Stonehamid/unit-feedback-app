@@ -5,35 +5,43 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rules;
 
 class AuthController extends Controller
 {
+    /**
+     * Register new user
+     */
     public function register(Request $request)
     {
         $request->validate([
-            'name' => 'required|string',
-            'email' => 'required|string|email|unique:users',
-            'password' => 'required|string|min:8|confirmed',
-            'role' => 'required|in:admin,reviewer,user'
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'role' => 'sometimes|string|in:user,reviewer,admin' // Default 'user'
         ]);
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => $request->role,
+            'role' => $request->role ?? 'user',
         ]);
 
-        $token = $user->createToken('api_token')->plainTextToken;
+        $token = $user->createToken('auth_token')->plainTextToken;
 
-        return response()->json([
+        return [
             'user' => $user,
-            'token' => $token
-        ], 201);
+            'token' => $token,
+            'message' => 'Registration successful'
+        ];
     }
 
+    /**
+     * Login user
+     */
     public function login(Request $request)
     {
         $request->validate([
@@ -41,25 +49,31 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-        $user = User::where('email', $request->email)->first();
-
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
-            ]);
+        if (!Auth::attempt($request->only('email', 'password'))) {
+            return response()->json([
+                'message' => 'Invalid credentials'
+            ], 401);
         }
 
-        $token = $user->createToken('api_token')->plainTextToken;
+        $user = User::where('email', $request->email)->firstOrFail();
+        $token = $user->createToken('auth_token')->plainTextToken;
 
-        return response()->json([
+        return [
             'user' => $user,
-            'token' => $token
-        ]);
+            'token' => $token,
+            'message' => 'Login successful'
+        ];
     }
 
+    /**
+     * Logout user (revoke token)
+     */
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
-        return response()->json(['message' => 'Logged out successfully']);
+
+        return [
+            'message' => 'Logged out successfully'
+        ];
     }
 }

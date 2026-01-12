@@ -45,12 +45,20 @@ class User extends Authenticatable
         'password' => 'hashed',
     ];
 
-    /**
-     * Relasi ke tabel reports (sebagai admin).
-     */
+
     public function reports()
     {
         return $this->hasMany(Report::class, 'admin_id');
+    }
+
+    public function ratings()
+    {
+        return $this->hasMany(Rating::class, 'reviewer_name', 'name');
+    }
+
+    public function messages()
+    {
+        return $this->hasMany(Message::class, 'name', 'name');
     }
 
     /**
