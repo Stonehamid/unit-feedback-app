@@ -19,14 +19,11 @@ return Application::configure(basePath: dirname(__DIR__))
 
             Route::middleware('api')
                 ->group(base_path('routes/reviewer-public.php'));
-
-            /*
-            Route::middleware('api')
-                ->prefix('api/reviewer')
-                ->group(base_path('routes/reviewer.php'));
-            */
         }
+
     )
+
+
     ->withMiddleware(function (Middleware $middleware): void {
         // ============================================
         // REGISTER MIDDLEWARE ALIAS
