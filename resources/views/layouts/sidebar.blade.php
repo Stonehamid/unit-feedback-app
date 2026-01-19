@@ -17,7 +17,7 @@
           <span class="hide-menu">Home</span>
         </li>
         <li class="sidebar-item">
-          <a class="sidebar-link primary-hover-bg" href="./index.html" aria-expanded="false">
+          <a class="sidebar-link primary-hover-bg" href="{{ url('/admin/dashboard') }}" aria-expanded="false">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
               <path fill="none" stroke="currentColor" stroke-width="1.5"
                 d="M3 7.4V3.6a.6.6 0 0 1 .6-.6h5.8a.6.6 0 0 1 .6.6v3.8a.6.6 0 0 1-.6.6H3.6a.6.6 0 0 1-.6-.6Zm11 13v-3.8a.6.6 0 0 1 .6-.6h5.8a.6.6 0 0 1 .6.6v3.8a.6.6 0 0 1-.6.6h-5.8a.6.6 0 0 1-.6-.6Zm0-8V3.6a.6.6 0 0 1 .6-.6h5.8a.6.6 0 0 1 .6.6v8.8a.6.6 0 0 1-.6.6h-5.8a.6.6 0 0 1-.6-.6Zm-11 8v-8.8a.6.6 0 0 1 .6-.6h5.8a.6.6 0 0 1 .6.6v8.8a.6.6 0 0 1-.6.6H3.6a.6.6 0 0 1-.6-.6Z" />
@@ -30,10 +30,10 @@
         </li>
         <li class="nav-small-cap">
           <iconify-icon icon="solar:menu-dots-linear" class="nav-small-cap-icon fs-4"></iconify-icon>
-          <span class="hide-menu">UI</span>
+          <span class="hide-menu">Management</span>
         </li>
         <li class="sidebar-item">
-          <a class="sidebar-link primary-hover-bg" href="./ui-buttons.html" aria-expanded="false">
+          <a class="sidebar-link primary-hover-bg" href="{{ url('/admin/messages') }}" aria-expanded="false">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
               <g fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1">
                 <path d="M19.5 4.5h-18l3 5v7a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-9a3 3 0 0 0-3-3Z" />
@@ -44,7 +44,7 @@
           </a>
         </li>
         <li class="sidebar-item">
-          <a class="sidebar-link primary-hover-bg" href="./ui-buttons.html" aria-expanded="false">
+          <a class="sidebar-link primary-hover-bg" href="{{ url('/admin/units') }}" aria-expanded="false">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
               <g fill="none" stroke="currentColor" stroke-width="1.5">
                 <path
@@ -57,31 +57,24 @@
           </a>
         </li>
         <li class="sidebar-item">
-          <a class="sidebar-link primary-hover-bg" href="./ui-alerts.html" aria-expanded="false">
+          <a class="sidebar-link primary-hover-bg" href="{{ url('/admin/users') }}" aria-expanded="false">
+            <iconify-icon icon="solar:users-group-rounded-line-duotone"></iconify-icon>
+            <span class="hide-menu">Users</span>
+          </a>
+        </li>
+        <li class="sidebar-item">
+          <a class="sidebar-link primary-hover-bg" href="{{ url('/admin/ratings') }}" aria-expanded="false">
+            <iconify-icon icon="solar:star-line-duotone"></iconify-icon>
+            <span class="hide-menu">Ratings</span>
+          </a>
+        </li>
+        <li class="sidebar-item">
+          <a class="sidebar-link primary-hover-bg" href="{{ url('/admin/reports') }}" aria-expanded="false">
             <iconify-icon icon="solar:danger-circle-line-duotone"></iconify-icon>
-            <span class="hide-menu">Report</span>
+            <span class="hide-menu">Reports</span>
           </a>
         </li>
-        <li class="sidebar-item">
-          <a class="sidebar-link primary-hover-bg" href="./ui-card.html" aria-expanded="false">
-            <iconify-icon icon="solar:bookmark-square-minimalistic-line-duotone"></iconify-icon>
-            <span class="hide-menu">Card</span>
-          </a>
-        </li>
-        <li class="sidebar-item">
-          <a class="sidebar-link primary-hover-bg" href="./ui-forms.html" aria-expanded="false">
-            <iconify-icon icon="solar:file-text-line-duotone"></iconify-icon>
-            <span class="hide-menu">Forms</span>
-          </a>
-        </li>
-        <li class="sidebar-item">
-          <a class="sidebar-link primary-hover-bg" href="./ui-typography.html" aria-expanded="false">
-            <iconify-icon icon="solar:text-field-focus-line-duotone"></iconify-icon>
-            <span class="hide-menu">Typography</span>
-          </a>
-        </li>
+      </ul>
     </nav>
-    <!-- End Sidebar navigation -->
   </div>
-  <!-- End Sidebar scroll-->
 </aside>

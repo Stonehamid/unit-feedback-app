@@ -25,6 +25,10 @@ class UnitFilterService
             $query->where('type', $request->type);
         }
         
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+        
         if ($request->has('min_rating')) {
             $query->having('ratings_avg_rating', '>=', $request->min_rating);
         }
@@ -66,6 +70,12 @@ class UnitFilterService
                 $query->doesntHave('ratings');
             }
         }
+
+        if ($request->has('operating_now')) {
+            $currentTime = now()->format('H:i:s');
+            $query->where('opening_time', '<=', $currentTime)
+                  ->where('closing_time', '>=', $currentTime);
+        }
     }
     
     private function applySorting($query, Request $request): void
@@ -83,6 +93,12 @@ class UnitFilterService
             case 'messages_count':
                 $query->orderBy('messages_count', $orderDir);
                 break;
+            case 'name':
+                $query->orderBy('name', $orderDir);
+                break;
+            case 'status':
+                $query->orderBy('status', $orderDir);
+                break;
             default:
                 $query->orderBy($orderBy, $orderDir);
         }
@@ -99,6 +115,7 @@ class UnitFilterService
         return [
             'types' => Unit::distinct()->pluck('type'),
             'locations' => Unit::distinct()->pluck('location')->take(50),
+            'statuses' => ['OPEN', 'CLOSED', 'FULL']
         ];
     }
 }

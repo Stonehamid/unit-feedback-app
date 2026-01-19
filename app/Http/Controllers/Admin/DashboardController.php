@@ -10,7 +10,7 @@ class DashboardController extends Controller
 {
     protected $cacheService;
     protected $statsService;
-    
+
     public function __construct(
         DashboardCacheService $cacheService,
         DashboardStatsService $statsService
@@ -18,12 +18,18 @@ class DashboardController extends Controller
         $this->cacheService = $cacheService;
         $this->statsService = $statsService;
     }
-    
+
     public function index()
+    {
+        $stats = $this->cacheService->getCachedStats();
+        return view('admin.dashboard', compact('stats'));
+    }
+
+    public function getStats()
     {
         return $this->cacheService->getCachedStats();
     }
-    
+
     public function performance()
     {
         return [
@@ -31,11 +37,11 @@ class DashboardController extends Controller
             'cache_status' => $this->cacheService->getCachedStats(),
         ];
     }
-    
+
     public function clearCache()
     {
         $this->cacheService->clearCache();
-        
+
         return [
             'message' => 'Dashboard cache cleared successfully',
             'timestamp' => now()->toDateTimeString(),

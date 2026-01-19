@@ -3,17 +3,9 @@
 namespace App\Services\Unit;
 
 use App\Models\Unit;
-use App\Services\Logging\AdminActionLogger;
 
 class UnitBulkActionService
 {
-    protected $logger;
-    
-    public function __construct(AdminActionLogger $logger)
-    {
-        $this->logger = $logger;
-    }
-    
     public function handleBulkAction(array $unitIds, string $action, array $data = []): array
     {
         $units = Unit::whereIn('id', $unitIds)->get();
@@ -41,17 +33,27 @@ class UnitBulkActionService
                     $count++;
                     break;
                     
+                case 'mark_open':
+                    $unit->update(['status' => 'OPEN', 'status_changed_at' => now()]);
+                    $count++;
+                    break;
+                    
+                case 'mark_closed':
+                    $unit->update(['status' => 'CLOSED', 'status_changed_at' => now()]);
+                    $count++;
+                    break;
+                    
+                case 'mark_full':
+                    $unit->update(['status' => 'FULL', 'status_changed_at' => now()]);
+                    $count++;
+                    break;
+                    
                 case 'update':
                     $unit->update($data);
                     $count++;
                     break;
             }
         }
-        
-        $this->logger->logBulkAction($action, $unitIds, [
-            'unit_count' => $count,
-            'action_data' => $data,
-        ]);
         
         return [
             'count' => $count,

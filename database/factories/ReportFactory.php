@@ -8,11 +8,17 @@ class ReportFactory extends Factory
 {
     public function definition(): array
     {
+        $reportTypes = ['Performance', 'Complaint', 'Suggestion', 'Incident', 'Evaluation'];
+        $priorities = ['low', 'medium', 'high', 'critical'];
+        $statuses = ['draft', 'submitted', 'in_review', 'resolved', 'rejected'];
+        
         return [
-            'title' => $this->faker->sentence(),
+            'title' => $this->faker->sentence(6),
             'content' => $this->faker->paragraphs(3, true),
-            'unit_id' => \App\Models\Unit::factory(), 
-            'admin_id' => \App\Models\User::factory(),
+            'type' => $this->faker->randomElement($reportTypes),
+            'priority' => $this->faker->randomElement($priorities),
+            'status' => $this->faker->randomElement($statuses),
+            'created_at' => $this->faker->dateTimeBetween('-3 months', 'now'),
         ];
     }
 }

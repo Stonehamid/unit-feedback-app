@@ -5,55 +5,125 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Unit;
 use Illuminate\Http\Request;
-use App\Services\Unit\UnitFilterService;
 use App\Services\Unit\UnitService;
-use App\Services\Unit\UnitStatisticsService;
-use App\Services\Unit\UnitBulkActionService;
-use App\Services\Unit\UnitExportService;
 
 class UnitController extends Controller
 {
-    protected $filterService;
     protected $unitService;
-    protected $statsService;
-    protected $bulkService;
-    protected $exportService;
-    
-    public function __construct(
-        UnitFilterService $filterService,
-        UnitService $unitService,
-        UnitStatisticsService $statsService,
-        UnitBulkActionService $bulkService,
-        UnitExportService $exportService = null
-    ) {
-        $this->filterService = $filterService;
+
+    public function __construct(UnitService $unitService)
+    {
         $this->unitService = $unitService;
-        $this->statsService = $statsService;
-        $this->bulkService = $bulkService;
-        $this->exportService = $exportService;
     }
-    
+
     public function index(Request $request)
     {
-        $query = $this->filterService->buildQuery($request);
-        $units = $this->filterService->getPagination($query, $request);
-        $filterOptions = $this->filterService->getFilterOptions();
-        
-        return [
-            'units' => $units,
-            'filters' => [
-                'options' => $filterOptions,
-                'applied' => $request->all(),
-            ],
-            'stats' => $this->statsService->getOverallStats(),
-        ];
+        $query = Unit::withCount('ratings')
+            ->select(
+                'id',
+                'name',
+                'officer_name',
+                'type',
+                'description',
+                'location',
+                'status',
+                'photo',
+                'avg_rating',
+                'is_active',
+                'featured',
+                'created_at'
+            )
+            ->latest();
+
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->has('type')) {
+            $query->where('type', $request->type);
+        }
+
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('officer_name', 'like', "%{$search}%")
+                    ->orWhere('location', 'like', "%{$search}%");
+            });
+        }
+
+        $units = $query->paginate(10)->withQueryString();
+
+        // Get unique types for filter dropdown
+        $types = Unit::distinct()->pluck('type');
+
+        return view('admin.units.index', compact('units', 'types'));
     }
-    
-    public function show(Unit $unit)
+
+    public function apiIndex(Request $request)
     {
-        return $this->unitService->getUnitWithDetails($unit);
+        $units = Unit::withCount('ratings')
+            ->select(
+                'id',
+                'name',
+                'officer_name',
+                'type',
+                'description',
+                'location',
+                'status',
+                'avg_rating',
+                'is_active',
+                'featured',
+                'opening_time',
+                'closing_time',
+                'created_at'
+            )
+            ->latest()
+            ->take(10)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'units' => $units,
+                'total' => Unit::count(),
+            ]
+        ]);
     }
-    
+
+    public function create()
+    {
+        return view('admin.units.create');
+    }
+
+    public function show($id)
+    {
+        $unit = Unit::find($id);
+
+        if (!$unit) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unit not found'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $unit
+        ]);
+    }
+
+    public function edit($id)
+    {
+        $unit = Unit::find($id);
+
+        if (!$unit) {
+            abort(404);
+        }
+
+        return view('admin.units.edit', compact('unit'));
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -62,91 +132,229 @@ class UnitController extends Controller
             'type' => 'required|string|max:255',
             'description' => 'required|string|min:10',
             'location' => 'required|string|max:255',
-            'photo' => 'nullable|image|max:5120|mimes:jpg,jpeg,png,webp',
+            'status' => 'required|in:OPEN,CLOSED,FULL',
             'contact_email' => 'nullable|email',
             'contact_phone' => 'nullable|string|max:20',
-            'working_hours' => 'nullable|string|max:255',
+            'opening_time' => 'nullable|date_format:H:i',
+            'closing_time' => 'nullable|date_format:H:i|after:opening_time',
+            'is_active' => 'sometimes|boolean',
+            'featured' => 'sometimes|boolean',
+            'photo' => 'nullable|image|max:5120',
         ]);
-        
-        $photo = $request->hasFile('photo') ? $request->file('photo') : null;
-        $unit = $this->unitService->createUnit($validated, $photo);
-        
-        return [
-            'unit' => $unit,
-            'message' => 'Unit created successfully'
-        ];
+
+        if ($request->hasFile('photo')) {
+            $validated['photo'] = $request->file('photo')->store('unit-photos', 'public');
+        }
+
+        $unit = Unit::create($validated);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'data' => $unit,
+                'message' => 'Unit created successfully'
+            ]);
+        }
+
+        return redirect()->route('admin.units.view')
+            ->with('success', 'Unit created successfully');
     }
-    
-    public function update(Request $request, Unit $unit)
+
+    public function update(Request $request, $id)
     {
+        $unit = Unit::find($id);
+
+        if (!$unit) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unit not found'
+            ], 404);
+        }
+
         $validated = $request->validate([
-            'name' => 'sometimes|string|max:255|unique:units,name,' . $unit->id,
+            'name' => 'sometimes|string|max:255|unique:units,name,' . $id,
             'officer_name' => 'sometimes|string|max:255',
             'type' => 'sometimes|string|max:255',
             'description' => 'sometimes|string|min:10',
             'location' => 'sometimes|string|max:255',
-            'photo' => 'nullable|image|max:5120|mimes:jpg,jpeg,png,webp',
+            'status' => 'sometimes|in:OPEN,CLOSED,FULL',
             'contact_email' => 'nullable|email',
             'contact_phone' => 'nullable|string|max:20',
-            'working_hours' => 'nullable|string|max:255',
+            'opening_time' => 'nullable|date_format:H:i',
+            'closing_time' => 'nullable|date_format:H:i|after:opening_time',
             'is_active' => 'sometimes|boolean',
             'featured' => 'sometimes|boolean',
+            'photo' => 'nullable|image|max:5120',
         ]);
-        
-        $photo = $request->hasFile('photo') ? $request->file('photo') : null;
-        $removePhoto = $request->has('remove_photo') && $request->remove_photo === true;
-        
-        $updatedUnit = $this->unitService->updateUnit($unit, $validated, $photo, $removePhoto);
-        
-        return [
-            'unit' => $updatedUnit,
-            'message' => 'Unit updated successfully'
-        ];
-    }
-    
-    public function destroy(Unit $unit)
-    {
-        $force = request('action') === 'force';
-        $result = $this->unitService->deleteUnit($unit, $force);
-        
-        if (!$result['success']) {
-            return response()->json($result, 422);
+
+        if ($request->has('status') && $request->status !== $unit->status) {
+            $validated['status_changed_at'] = now();
         }
-        
-        return [
-            'message' => $result['message']
-        ];
+
+        if ($request->hasFile('photo')) {
+            if ($unit->photo) {
+                \Storage::disk('public')->delete($unit->photo);
+            }
+            $validated['photo'] = $request->file('photo')->store('unit-photos', 'public');
+        }
+
+        if ($request->has('remove_photo') && $request->remove_photo) {
+            if ($unit->photo) {
+                \Storage::disk('public')->delete($unit->photo);
+            }
+            $validated['photo'] = null;
+        }
+
+        $unit->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'data' => $unit,
+            'message' => 'Unit updated successfully'
+        ]);
     }
-    
-    public function statistics(Unit $unit)
+
+    public function destroy($id)
     {
-        return $this->statsService->getUnitStatistics($unit);
+        $unit = Unit::find($id);
+
+        if (!$unit) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unit not found'
+            ], 404);
+        }
+
+        if ($unit->photo) {
+            \Storage::disk('public')->delete($unit->photo);
+        }
+
+        $unit->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Unit deleted successfully'
+        ]);
     }
-    
+
+    public function statistics($id)
+    {
+        $unit = Unit::find($id);
+
+        if (!$unit) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unit not found'
+            ], 404);
+        }
+
+        $ratings = $unit->ratings()->where('is_approved', true)->get();
+
+        $totalRatings = $ratings->count();
+        $averageRating = $totalRatings > 0 ? $ratings->avg('rating') : 0;
+
+        $ratingDistribution = [
+            5 => $ratings->where('rating', 5)->count(),
+            4 => $ratings->where('rating', 4)->count(),
+            3 => $ratings->where('rating', 3)->count(),
+            2 => $ratings->where('rating', 2)->count(),
+            1 => $ratings->where('rating', 1)->count(),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'unit_id' => $unit->id,
+                'unit_name' => $unit->name,
+                'status' => $unit->status,
+                'status_label' => $unit->status_label,
+                'total_ratings' => $totalRatings,
+                'average_rating' => round($averageRating, 2),
+                'rating_distribution' => $ratingDistribution,
+                'messages_count' => $unit->messages()->count(),
+                'reports_count' => $unit->reports()->count(),
+            ]
+        ]);
+    }
+
     public function bulkAction(Request $request)
     {
         $request->validate([
             'unit_ids' => 'required|array',
             'unit_ids.*' => 'exists:units,id',
-            'action' => 'required|in:activate,deactivate,feature,unfeature',
+            'action' => 'required|in:activate,deactivate,feature,unfeature,mark_open,mark_closed,mark_full',
         ]);
-        
-        $result = $this->bulkService->handleBulkAction(
-            $request->unit_ids, 
-            $request->action
-        );
-        
-        return [
-            'message' => $result['message']
-        ];
-    }
-    
-    public function export(Request $request)
-    {
-        if (!$this->exportService) {
-            $this->exportService = app(UnitExportService::class);
+
+        $count = 0;
+        $units = Unit::whereIn('id', $request->unit_ids)->get();
+
+        foreach ($units as $unit) {
+            switch ($request->action) {
+                case 'activate':
+                    $unit->update(['is_active' => true]);
+                    $count++;
+                    break;
+                case 'deactivate':
+                    $unit->update(['is_active' => false]);
+                    $count++;
+                    break;
+                case 'feature':
+                    $unit->update(['featured' => true]);
+                    $count++;
+                    break;
+                case 'unfeature':
+                    $unit->update(['featured' => false]);
+                    $count++;
+                    break;
+                case 'mark_open':
+                    $unit->update(['status' => 'OPEN', 'status_changed_at' => now()]);
+                    $count++;
+                    break;
+                case 'mark_closed':
+                    $unit->update(['status' => 'CLOSED', 'status_changed_at' => now()]);
+                    $count++;
+                    break;
+                case 'mark_full':
+                    $unit->update(['status' => 'FULL', 'status_changed_at' => now()]);
+                    $count++;
+                    break;
+            }
         }
-        
-        return $this->exportService->exportUnits($request->get('format', 'json'));
+
+        return response()->json([
+            'success' => true,
+            'message' => "Action completed successfully. {$count} units updated."
+        ]);
+    }
+
+    public function updateStatus(Request $request, $id)
+    {
+        $request->validate([
+            'status' => 'required|in:OPEN,CLOSED,FULL',
+        ]);
+
+        $unit = Unit::find($id);
+
+        if (!$unit) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unit not found'
+            ], 404);
+        }
+
+        $unit->update([
+            'status' => $request->status,
+            'status_changed_at' => now()
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'unit' => $unit,
+                'status_label' => $unit->status_label,
+                'status_color' => $unit->status_color,
+            ],
+            'message' => 'Status updated successfully'
+        ]);
     }
 }

@@ -10,7 +10,8 @@ class MessageFactory extends Factory
     {
         return [
             'name' => $this->faker->name(),
-            'message' => $this->faker->paragraph(),
+            'message' => $this->faker->paragraph(2),
+            'created_at' => $this->faker->dateTimeBetween('-6 months', 'now'),
         ];
     }
 }

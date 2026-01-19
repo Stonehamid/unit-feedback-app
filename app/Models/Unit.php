@@ -17,76 +17,153 @@ class Unit extends Model
         'type',
         'description',
         'location',
+        'status',
         'photo',
         'avg_rating',
+        'is_active',
+        'featured',
+        'contact_email',
+        'contact_phone',
+        'opening_time',
+        'closing_time',
+        'status_changed_at'
     ];
 
     protected $casts = [
         'avg_rating' => 'decimal:2',
+        'is_active' => 'boolean',
+        'featured' => 'boolean',
+        'opening_time' => 'datetime:H:i',
+        'closing_time' => 'datetime:H:i',
+        'status_changed_at' => 'datetime'
     ];
 
-    /**
-     * Get all ratings for this unit
-     */
     public function ratings()
     {
         return $this->hasMany(Rating::class);
     }
 
-    /**
-     * Get all messages for this unit
-     */
     public function messages()
     {
         return $this->hasMany(Message::class);
     }
 
-    /**
-     * Get all reports for this unit
-     */
     public function reports()
     {
         return $this->hasMany(Report::class);
     }
 
-    /**
-     * Scope untuk mencari unit berdasarkan type
-     */
     public function scopeByType($query, $type)
     {
         return $query->where('type', $type);
     }
 
-    /**
-     * Scope untuk unit dengan rating tinggi
-     */
     public function scopeHighRated($query, $threshold = 4.0)
     {
         return $query->where('avg_rating', '>=', $threshold);
     }
 
-    /**
-     * Update average rating
-     */
+    public function scopeOpen($query)
+    {
+        return $query->where('status', 'OPEN')->where('is_active', true);
+    }
+    
+    public function scopeClosed($query)
+    {
+        return $query->where('status', 'CLOSED');
+    }
+    
+    public function scopeFull($query)
+    {
+        return $query->where('status', 'FULL');
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeFeatured($query)
+    {
+        return $query->where('featured', true)->where('is_active', true);
+    }
+
+    public function getStatusLabelAttribute()
+    {
+        return match($this->status) {
+            'OPEN' => 'Buka',
+            'CLOSED' => 'Tutup',
+            'FULL' => 'Penuh',
+            default => $this->status,
+        };
+    }
+    
+    public function getStatusColorAttribute()
+    {
+        return match($this->status) {
+            'OPEN' => 'success',
+            'CLOSED' => 'danger',
+            'FULL' => 'warning',
+            default => 'secondary',
+        };
+    }
+
+    public function getOperatingHoursAttribute()
+    {
+        if ($this->opening_time && $this->closing_time) {
+            return date('H:i', strtotime($this->opening_time)) . ' - ' . date('H:i', strtotime($this->closing_time));
+        }
+        return null;
+    }
+
+    public function getIsOperatingAttribute()
+    {
+        if ($this->status !== 'OPEN' || !$this->is_active) {
+            return false;
+        }
+
+        if (!$this->opening_time || !$this->closing_time) {
+            return true;
+        }
+
+        $currentTime = now()->format('H:i:s');
+        return $currentTime >= $this->opening_time && $currentTime <= $this->closing_time;
+    }
+
     public function updateAverageRating()
     {
-        $this->avg_rating = $this->ratings()->avg('rating');
-        $this->save();
+        $avgRating = $this->ratings()
+            ->where('is_approved', true)
+            ->avg('rating');
+
+        $this->update(['avg_rating' => round($avgRating ?: 0, 2)]);
+    }
+
+    public function updateStatus($newStatus)
+    {
+        $this->update([
+            'status' => $newStatus,
+            'status_changed_at' => now()
+        ]);
+    }
+
+    public function markAsFull()
+    {
+        $this->updateStatus('FULL');
+    }
+
+    public function markAsOpen()
+    {
+        $this->updateStatus('OPEN');
+    }
+
+    public function markAsClosed()
+    {
+        $this->updateStatus('CLOSED');
     }
 
     protected static function newFactory(): Factory
     {
         return UnitFactory::new();
-    }
-
-    public function getIsActiveAttribute()
-    {
-        // Default semua unit aktif
-        return $this->attributes['is_active'] ?? true;
-    }
-
-    public function setIsActiveAttribute($value)
-    {
-        $this->attributes['is_active'] = $value;
     }
 }

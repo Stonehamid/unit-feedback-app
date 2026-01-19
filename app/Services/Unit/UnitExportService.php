@@ -20,27 +20,28 @@ class UnitExportService
         
         return match($format) {
             'csv' => $this->exportToCsv($units),
-            'excel' => $this->exportToExcel($units),
-            'pdf' => $this->exportToPdf($units),
             default => $this->exportToJson($units),
         };
     }
     
     public function exportToCsv($units)
     {
-        $csv = "ID,Name,Type,Officer,Location,Avg Rating,Total Ratings,Total Messages,Status,Featured,Created At\n";
+        $csv = "ID,Name,Type,Status,Officer,Location,Opening Time,Closing Time,Avg Rating,Total Ratings,Total Messages,Active,Featured,Created At\n";
         
         foreach ($units as $unit) {
             $csv .= implode(',', [
                 $unit->id,
                 '"' . str_replace('"', '""', $unit->name) . '"',
                 '"' . str_replace('"', '""', $unit->type) . '"',
+                $unit->status,
                 '"' . str_replace('"', '""', $unit->officer_name) . '"',
                 '"' . str_replace('"', '""', $unit->location) . '"',
+                $unit->opening_time,
+                $unit->closing_time,
                 $unit->ratings_avg_rating ?? 0,
                 $unit->ratings_count,
                 $unit->messages_count,
-                $unit->is_active ? 'Active' : 'Inactive',
+                $unit->is_active ? 'Yes' : 'No',
                 $unit->featured ? 'Yes' : 'No',
                 $unit->created_at->format('Y-m-d')
             ]) . "\n";
@@ -56,20 +57,24 @@ class UnitExportService
                 'id' => $unit->id,
                 'name' => $unit->name,
                 'type' => $unit->type,
+                'status' => $unit->status,
                 'officer_name' => $unit->officer_name,
                 'location' => $unit->location,
                 'description' => $unit->description,
+                'opening_time' => $unit->opening_time,
+                'closing_time' => $unit->closing_time,
                 'contact_email' => $unit->contact_email,
                 'contact_phone' => $unit->contact_phone,
-                'working_hours' => $unit->working_hours,
                 'statistics' => [
                     'average_rating' => $unit->ratings_avg_rating ?? 0,
                     'total_ratings' => $unit->ratings_count,
                     'total_messages' => $unit->messages_count,
                 ],
-                'status' => [
+                'status_info' => [
+                    'label' => $unit->status_label,
                     'is_active' => (bool) $unit->is_active,
                     'featured' => (bool) $unit->featured,
+                    'last_status_change' => $unit->status_changed_at,
                 ],
                 'timestamps' => [
                     'created_at' => $unit->created_at->toISOString(),
@@ -85,88 +90,30 @@ class UnitExportService
         ]);
     }
     
-    public function exportToExcel($units)
-    {
-        // For Excel export, you might use a package like Laravel Excel
-        // This is a simplified version
-        $csv = $this->exportToCsv($units);
-        
-        // Change filename to .xls
-        $filename = 'units-export-' . date('Y-m-d') . '.xls';
-        
-        return response($csv, 200, [
-            'Content-Type' => 'application/vnd.ms-excel',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-        ]);
-    }
-    
-    public function exportToPdf($units)
-    {
-        // This would require a PDF library like DomPDF
-        // Here's a conceptual implementation
-        
-        $html = '<html><head><style>
-            body { font-family: Arial; }
-            table { width: 100%; border-collapse: collapse; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background-color: #f2f2f2; }
-        </style></head><body>';
-        
-        $html .= '<h1>Units Export - ' . date('Y-m-d') . '</h1>';
-        $html .= '<table>';
-        $html .= '<tr><th>ID</th><th>Name</th><th>Type</th><th>Officer</th><th>Avg Rating</th><th>Total Ratings</th></tr>';
-        
-        foreach ($units as $unit) {
-            $html .= '<tr>';
-            $html .= '<td>' . $unit->id . '</td>';
-            $html .= '<td>' . htmlspecialchars($unit->name) . '</td>';
-            $html .= '<td>' . htmlspecialchars($unit->type) . '</td>';
-            $html .= '<td>' . htmlspecialchars($unit->officer_name) . '</td>';
-            $html .= '<td>' . ($unit->ratings_avg_rating ?? 0) . '</td>';
-            $html .= '<td>' . $unit->ratings_count . '</td>';
-            $html .= '</tr>';
-        }
-        
-        $html .= '</table>';
-        $html .= '<p>Total Units: ' . $units->count() . '</p>';
-        $html .= '</body></html>';
-        
-        // In real implementation, you would use:
-        // $pdf = \PDF::loadHTML($html);
-        // return $pdf->download('units-export-' . date('Y-m-d') . '.pdf');
-        
-        return response($html, 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="units-export-' . date('Y-m-d') . '.pdf"',
-        ]);
-    }
-    
     public function generateStatisticsReport(): array
     {
         $totalUnits = Unit::count();
         $activeUnits = Unit::where('is_active', true)->count();
         $featuredUnits = Unit::where('featured', true)->count();
         
+        $statusDistribution = Unit::selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->get()
+            ->pluck('count', 'status');
+        
         $byType = Unit::selectRaw('type, COUNT(*) as count, AVG(avg_rating) as avg_rating')
             ->groupBy('type')
             ->orderBy('count', 'desc')
-            ->get()
-            ->map(function($item) {
-                return [
-                    'type' => $item->type,
-                    'count' => $item->count,
-                    'average_rating' => round($item->avg_rating, 2),
-                ];
-            });
+            ->get();
         
         $topRatedUnits = Unit::orderBy('avg_rating', 'desc')
             ->limit(10)
-            ->get(['id', 'name', 'type', 'avg_rating', 'ratings_count']);
+            ->get(['id', 'name', 'type', 'status', 'avg_rating', 'ratings_count']);
         
         $mostActiveUnits = Unit::withCount('ratings')
             ->orderBy('ratings_count', 'desc')
             ->limit(10)
-            ->get(['id', 'name', 'type', 'ratings_count']);
+            ->get(['id', 'name', 'type', 'status', 'ratings_count']);
         
         return [
             'summary' => [
@@ -175,6 +122,7 @@ class UnitExportService
                 'featured_units' => $featuredUnits,
                 'inactive_units' => $totalUnits - $activeUnits,
             ],
+            'status_distribution' => $statusDistribution,
             'breakdown' => [
                 'by_type' => $byType,
             ],
