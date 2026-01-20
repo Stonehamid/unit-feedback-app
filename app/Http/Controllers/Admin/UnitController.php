@@ -35,15 +35,15 @@ class UnitController extends Controller
             )
             ->latest();
 
-        if ($request->has('status')) {
+        if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        if ($request->has('type')) {
+        if ($request->filled('type')) {
             $query->where('type', $request->type);
         }
 
-        if ($request->has('search')) {
+        if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
@@ -53,8 +53,6 @@ class UnitController extends Controller
         }
 
         $units = $query->paginate(10)->withQueryString();
-
-        // Get unique types for filter dropdown
         $types = Unit::distinct()->pluck('type');
 
         return view('admin.units.index', compact('units', 'types'));
@@ -98,7 +96,7 @@ class UnitController extends Controller
 
     public function show($id)
     {
-        $unit = Unit::find($id);
+        $unit = Unit::withCount('ratings')->find($id);
 
         if (!$unit) {
             return response()->json([
@@ -107,10 +105,7 @@ class UnitController extends Controller
             ], 404);
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => $unit
-        ]);
+        return view('admin.units.show', compact('unit'));
     }
 
     public function edit($id)
@@ -207,11 +202,16 @@ class UnitController extends Controller
 
         $unit->update($validated);
 
-        return response()->json([
-            'success' => true,
-            'data' => $unit,
-            'message' => 'Unit updated successfully'
-        ]);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'data' => $unit,
+                'message' => 'Unit updated successfully'
+            ]);
+        }
+
+        return redirect()->route('admin.units.view')
+            ->with('success', 'Unit updated successfully');
     }
 
     public function destroy($id)
@@ -231,10 +231,15 @@ class UnitController extends Controller
 
         $unit->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Unit deleted successfully'
-        ]);
+        if (request()->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Unit deleted successfully'
+            ]);
+        }
+
+        return redirect()->route('admin.units.view')
+            ->with('delete', 'Unit deleted successfully');
     }
 
     public function statistics($id)

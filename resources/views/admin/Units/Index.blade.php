@@ -1,649 +1,537 @@
 @extends('layouts.admin')
 
 @section('content')
-    <div class="container-fluid px-0 px-md-4">
-        <!-- Header yang lebih clean -->
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
-            <div>
-                <h1 class="h4 fw-bold mb-1">Units</h1>
-                <p class="text-muted mb-0" style="font-size: 13px;">Total {{ $units->total() }} unit</p>
+<div class="container-fluid px-4 py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 fw-bold mb-0" style="color: #1a1a1a;">Unit Inventory</h1>
+        </div>
+    </div>
+
+    <div class="card-body py-3">
+        <div class="d-flex justify-content-between align-items-center gap-3">
+            <div class="position-relative" style="flex: 1; max-width: 500px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="#6b7280" stroke-width="2" class="position-absolute top-50 translate-middle-y ms-3"
+                    style="left: 0; z-index: 10;">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.35-4.35" />
+                </svg>
+                <input type="text" id="searchInput" class="form-control ps-5 rounded-pill border shadow-sm"
+                    placeholder="Search units by name, officer, or location..." value="{{ request('search') }}"
+                    style="height: 44px; background-color: white; border-color: #d1d5db !important;">
             </div>
+
             <div class="d-flex align-items-center gap-2">
-                <!-- Search Bar Compact -->
-                <div class="d-none d-md-flex align-items-center">
-                    <div class="input-group input-group-sm rounded-3" style="width: 200px;">
-                        <span class="input-group-text bg-transparent border-end-0">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" 
-                                 fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="11" cy="11" r="8"/>
-                                <path d="m21 21-4.35-4.35"/>
-                            </svg>
-                        </span>
-                        <input type="text" class="form-control form-control-sm border-start-0" 
-                               placeholder="Cari unit..." id="quickSearch">
+                <div class="dropdown">
+                    <button
+                        class="btn btn-light border rounded-pill px-4 d-flex align-items-center gap-2 shadow-sm btn-filter"
+                        type="button" id="filterDropdown" data-bs-toggle="dropdown"
+                        style="height: 44px; background-color: white; border-color: #d1d5db;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                        </svg>
+                        <span id="filterText" class="fw-medium">Filter</span>
+                        @if(request('status') || request('type'))
+                            <span class="badge bg-primary rounded-circle ms-1" style="width: 6px; height: 6px;"></span>
+                        @endif
+                    </button>
+
+                    <div class="dropdown-menu p-3 border-0 shadow-lg rounded-3" style="min-width: 320px;">
+                        <div class="mb-3">
+                            <small class="text-uppercase text-muted fw-semibold mb-2 d-block"
+                                style="font-size: 0.7rem;">STATUS</small>
+                            <div class="d-flex flex-wrap gap-2">
+                                <a href="{{ request()->fullUrlWithQuery(['status' => '']) }}"
+                                    class="badge rounded-pill px-3 py-2 text-decoration-none 
+                                              {{ !request('status') ? 'bg-primary text-white' : 'bg-light text-dark border' }}">
+                                    All
+                                </a>
+                                <a href="{{ request()->fullUrlWithQuery(['status' => 'OPEN']) }}"
+                                    class="badge rounded-pill px-3 py-2 text-decoration-none 
+                                              {{ request('status') == 'OPEN' ? 'bg-success text-white' : 'bg-light text-dark border' }}">
+                                    Open
+                                </a>
+                                <a href="{{ request()->fullUrlWithQuery(['status' => 'CLOSED']) }}"
+                                    class="badge rounded-pill px-3 py-2 text-decoration-none 
+                                              {{ request('status') == 'CLOSED' ? 'bg-danger text-white' : 'bg-light text-dark border' }}">
+                                    Closed
+                                </a>
+                                <a href="{{ request()->fullUrlWithQuery(['status' => 'FULL']) }}"
+                                    class="badge rounded-pill px-3 py-2 text-decoration-none 
+                                              {{ request('status') == 'FULL' ? 'bg-warning text-white' : 'bg-light text-dark border' }}">
+                                    Full
+                                </a>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-uppercase text-muted fw-semibold mb-2 d-block"
+                                style="font-size: 0.7rem;">TYPE</small>
+                            <div class="d-flex flex-wrap gap-2">
+                                <a href="{{ request()->fullUrlWithQuery(['type' => '']) }}"
+                                    class="badge rounded-pill px-3 py-2 text-decoration-none 
+                                              {{ !request('type') ? 'bg-primary text-white' : 'bg-light text-dark border' }}">
+                                    All
+                                </a>
+                                @foreach($types ?? [] as $type)
+                                    <a href="{{ request()->fullUrlWithQuery(['type' => $type]) }}"
+                                        class="badge rounded-pill px-3 py-2 text-decoration-none 
+                                                      {{ request('type') == $type ? 'bg-primary text-white' : 'bg-light text-dark border' }}">
+                                        {{ $type }}
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2 mt-3">
+                            <button type="button" class="btn btn-sm btn-light flex-grow-1 rounded-2 border"
+                                onclick="clearFilters()">
+                                Clear All
+                            </button>
+                            <a href="{{ route('admin.units.view') }}"
+                                class="btn btn-sm flex-grow-1 rounded-2 btn-reset">
+                                Reset Filters
+                            </a>
+                        </div>
                     </div>
                 </div>
 
                 <div class="dropdown">
-                    <button class="btn btn-outline-secondary btn-sm rounded-3 px-3 d-flex align-items-center gap-2" 
-                            type="button" data-bs-toggle="dropdown">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" 
-                             fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M6 8l6 6 6-6"/>
+                    <button
+                        class="btn btn-light border rounded-pill px-3 d-flex align-items-center gap-2 shadow-sm btn-export"
+                        type="button" data-bs-toggle="dropdown"
+                        style="height: 44px; background-color: white; border-color: #d1d5db;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
                         </svg>
-                        Ekspor
+                        <span class="fw-medium">Export</span>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="#">PDF</a></li>
-                        <li><a class="dropdown-item" href="#">Excel</a></li>
-                        <li><a class="dropdown-item" href="#">Print</a></li>
+                    <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-3">
+                        <li><a class="dropdown-item py-2 px-3 d-flex align-items-center gap-2" href="#">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                    <line x1="16" y1="13" x2="8" y2="13" />
+                                    <line x1="16" y1="17" x2="8" y2="17" />
+                                    <polyline points="10 9 9 9 8 9" />
+                                </svg>
+                                PDF Report
+                            </a></li>
+                        <li><a class="dropdown-item py-2 px-3 d-flex align-items-center gap-2" href="#">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                    <path d="M16 13H8" />
+                                    <path d="M16 17H8" />
+                                    <path d="M10 9H9H8" />
+                                </svg>
+                                Excel Sheet
+                            </a></li>
+                        <li><a class="dropdown-item py-2 px-3 d-flex align-items-center gap-2" href="#">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="6 9 6 2 18 2 18 9" />
+                                    <path
+                                        d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                                    <rect x="6" y="14" width="12" height="8" />
+                                </svg>
+                                Print View
+                            </a></li>
                     </ul>
                 </div>
-                
-                <a href="{{ route('admin.units.create') }}" 
-                   class="btn btn-primary btn-sm rounded-3 px-3 d-flex align-items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" 
-                         fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 5v14M5 12h14"/>
+                <a href="{{ route('admin.units.create') }}"
+                    class="btn btn-primary rounded-pill px-4 d-flex align-items-center gap-2 shadow-sm"
+                    style="height: 44px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border: none;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                        stroke="white" stroke-width="2.5">
+                        <path d="M12 5v14M5 12h14" />
                     </svg>
-                    Tambah Unit
+                    <span class="fw-medium">Create Unit</span>
                 </a>
             </div>
         </div>
+    </div>
+</div>
 
-        <!-- Alert Messages -->
-        @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show rounded-3 mb-4" role="alert">
-                <div class="d-flex align-items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" 
-                         fill="none" stroke="currentColor" stroke-width="2" class="me-2">
-                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                        <polyline points="22 4 12 14.01 9 11.01"/>
-                    </svg>
-                    {{ session('success') }}
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        @endif
+@if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show rounded-3 mb-4 d-flex align-items-center" role="alert">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" class="me-2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+            <polyline points="22 4 12 14.01 9 11.01" />
+        </svg>
+        {{ session('success') }}
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+    </div>
+@endif
 
-        @if(session('error'))
-            <div class="alert alert-danger alert-dismissible fade show rounded-3 mb-4" role="alert">
-                <div class="d-flex align-items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" 
-                         fill="none" stroke="currentColor" stroke-width="2" class="me-2">
-                        <circle cx="12" cy="12" r="10"/>
-                        <line x1="12" y1="8" x2="12" y2="12"/>
-                        <line x1="12" y1="16" x2="12.01" y2="16"/>
-                    </svg>
-                    {{ session('error') }}
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        @endif
+@if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show rounded-3 mb-4 d-flex align-items-center" role="alert">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" class="me-2">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+        {{ session('error') }}
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+    </div>
+@endif
 
-        <!-- Filter Section yang Lebih Modern -->
-        <div class="card border-0 shadow-sm rounded-3 mb-4">
-            <div class="card-body p-3">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="d-flex align-items-center gap-2">
-                        <button class="btn btn-link text-dark p-0 d-flex align-items-center" 
-                                type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" 
-                                 fill="none" stroke="currentColor" stroke-width="2" class="me-1">
-                                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
-                            </svg>
-                            <span class="fw-medium">Filter</span>
-                        </button>
-                        @if(request('status') || request('type') || request('search'))
-                            <span class="badge bg-light text-dark rounded-pill px-2 py-1" style="font-size: 11px;">
-                                Filter Aktif
-                                <a href="{{ route('admin.units.view') }}" class="text-danger ms-1">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" 
-                                         fill="none" stroke="currentColor" stroke-width="3">
-                                        <line x1="18" y1="6" x2="6" y2="18"/>
-                                        <line x1="6" y1="6" x2="18" y2="18"/>
-                                    </svg>
-                                </a>
-                            </span>
-                        @endif
-                    </div>
-                    
-                    <!-- Quick Actions -->
-                    <div class="d-flex align-items-center gap-2">
-                        <div class="dropdown">
-                            <button class="btn btn-outline-secondary btn-sm rounded-3 px-3 d-flex align-items-center gap-1" 
-                                    type="button" data-bs-toggle="dropdown">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" 
-                                     fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="3" y="3" width="7" height="7"/>
-                                    <rect x="14" y="3" width="7" height="7"/>
-                                    <rect x="3" y="14" width="7" height="7"/>
-                                    <rect x="14" y="14" width="7" height="7"/>
-                                </svg>
-                                Tampilan
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="#">Semua Kolom</a></li>
-                                <li><a class="dropdown-item" href="#">Kolom Minimal</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="#">Simpan Tampilan</a></li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="collapse {{ request('status') || request('type') || request('search') ? 'show' : '' }}" 
-                     id="filterCollapse">
-                    <form method="GET" action="{{ route('admin.units.view') }}" class="pt-2">
-                        <div class="row g-2">
-                            <div class="col-md-3">
-                                <div class="input-group input-group-sm">
-                                    <span class="input-group-text bg-transparent border-end-0" style="font-size: 12px;">
-                                        Status
-                                    </span>
-                                    <select name="status" class="form-select form-select-sm border-start-0 rounded-end">
-                                        <option value="">Semua</option>
-                                        <option value="OPEN" {{ request('status') == 'OPEN' ? 'selected' : '' }}>Buka</option>
-                                        <option value="CLOSED" {{ request('status') == 'CLOSED' ? 'selected' : '' }}>Tutup</option>
-                                        <option value="FULL" {{ request('status') == 'FULL' ? 'selected' : '' }}>Penuh</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="input-group input-group-sm">
-                                    <span class="input-group-text bg-transparent border-end-0" style="font-size: 12px;">
-                                        Tipe
-                                    </span>
-                                    <select name="type" class="form-select form-select-sm border-start-0 rounded-end">
-                                        <option value="">Semua</option>
-                                        @foreach($types ?? [] as $type)
-                                            <option value="{{ $type }}" {{ request('type') == $type ? 'selected' : '' }}>
-                                                {{ $type }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="input-group input-group-sm">
-                                    <input type="text" name="search" class="form-control form-control-sm" 
-                                           placeholder="Cari nama, officer, atau lokasi..." 
-                                           value="{{ request('search') }}">
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="d-flex gap-1">
-                                    <button type="submit" class="btn btn-primary btn-sm rounded-3 flex-grow-1">
-                                        Terapkan
-                                    </button>
-                                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-3" 
-                                            onclick="window.location.href='{{ route('admin.units.view') }}'">
-                                        Reset
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- Main Table -->
-        <div class="card border-0 shadow-sm rounded-3">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th style="width: 35%;" class="ps-4">Unit</th>
-                            <th style="width: 15%;" class="text-center">Tipe</th>
-                            <th style="width: 15%;" class="text-center">Rating</th>
-                            <th style="width: 15%;" class="text-center">Status</th>
-                            <th style="width: 20%;" class="text-end pe-4">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @if($units->count() > 0)
-                            @foreach($units as $unit)
-                                @php
-                                    // Status dengan kombinasi
-                                    $statusColor = '';
-                                    $statusIcon = '';
-                                    
-                                    switch($unit->status) {
-                                        case 'OPEN':
-                                            $statusColor = 'success';
-                                            $statusIcon = '✓';
-                                            break;
-                                        case 'CLOSED':
-                                            $statusColor = 'danger';
-                                            $statusIcon = '✗';
-                                            break;
-                                        case 'FULL':
-                                            $statusColor = 'warning';
-                                            $statusIcon = '⏳';
-                                            break;
-                                        default:
-                                            $statusColor = 'secondary';
-                                            $statusIcon = '•';
-                                    }
-                                    
-                                    $activeStatus = $unit->is_active ? 'Aktif' : 'Nonaktif';
-                                    $activeColor = $unit->is_active ? 'success' : 'secondary';
-                                    
-                                    // Photo URL
-                                    $photoUrl = $unit->photo 
-                                        ? asset('storage/' . $unit->photo)
-                                        : 'https://ui-avatars.com/api/?name=' . urlencode($unit->name) . '&background=3b82f6&color=ffffff&size=40';
-                                    
-                                    // Rating stars
-                                    $fullStars = floor($unit->avg_rating);
-                                    $halfStar = ($unit->avg_rating - $fullStars) >= 0.5;
-                                    $emptyStars = 5 - $fullStars - ($halfStar ? 1 : 0);
-                                @endphp
-                                
-                                <tr class="align-middle">
-                                    <!-- Unit Column -->
-                                    <td class="ps-4">
-                                        <div class="d-flex align-items-center gap-3">
-                                            <img src="{{ $photoUrl }}" width="40" height="40" 
-                                                 class="rounded-circle object-fit-cover border">
-                                            <div>
-                                                <div class="fw-medium mb-1">{{ $unit->name }}</div>
-                                                <div class="d-flex align-items-center gap-2">
-                                                    <span class="text-muted" style="font-size: 12px;">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" 
-                                                             fill="none" stroke="currentColor" stroke-width="2" class="me-1">
-                                                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                                                            <circle cx="12" cy="7" r="4"/>
-                                                        </svg>
-                                                        {{ $unit->officer_name }}
-                                                    </span>
-                                                    <span class="text-muted" style="font-size: 12px;">•</span>
-                                                    <span class="text-muted" style="font-size: 12px;">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" 
-                                                             fill="none" stroke="currentColor" stroke-width="2" class="me-1">
-                                                            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
-                                                            <circle cx="12" cy="10" r="3"/>
-                                                        </svg>
-                                                        {{ Str::limit($unit->location, 20) }}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    
-                                    <!-- Type Column -->
-                                    <td class="text-center">
-                                        <span class="badge bg-light-secondary text-secondary rounded-pill px-3" 
-                                              style="font-size: 11px;">
-                                            {{ $unit->type }}
-                                        </span>
-                                    </td>
-                                    
-                                    <!-- Rating Column -->
-                                    <td class="text-center">
-                                        <div class="d-flex flex-column align-items-center">
-                                            <div class="d-flex align-items-center mb-1">
-                                                <div class="d-flex align-items-center">
-                                                    @for($i = 0; $i < $fullStars; $i++)
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" 
-                                                             fill="#FFC107" stroke="#FFC107" stroke-width="1" class="me-1">
-                                                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                                                        </svg>
-                                                    @endfor
-                                                    
-                                                    @if($halfStar)
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" 
-                                                             fill="#FFC107" stroke="#FFC107" stroke-width="1" class="me-1">
-                                                            <defs>
-                                                                <linearGradient id="half-{{ $unit->id }}">
-                                                                    <stop offset="50%" stop-color="#FFC107"/>
-                                                                    <stop offset="50%" stop-color="transparent"/>
-                                                                </linearGradient>
-                                                            </defs>
-                                                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" 
-                                                                     fill="url(#half-{{ $unit->id }})"/>
-                                                        </svg>
-                                                    @endif
-                                                    
-                                                    @for($i = 0; $i < $emptyStars; $i++)
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" 
-                                                             fill="none" stroke="#FFC107" stroke-width="1" class="me-1">
-                                                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                                                        </svg>
-                                                    @endfor
-                                                </div>
-                                            </div>
-                                            <span class="fw-medium" style="font-size: 12px;">
-                                                {{ number_format($unit->avg_rating, 1) }}
-                                            </span>
-                                        </div>
-                                    </td>
-                                    
-                                    <!-- Status Column -->
-                                    <td class="text-center">
-                                        <div class="d-flex flex-column align-items-center gap-1">
-                                            <span class="badge bg-light-{{ $statusColor }} text-{{ $statusColor }} 
-                                                   rounded-pill px-3 d-flex align-items-center gap-1" style="font-size: 11px;">
-                                                <span>{{ $statusIcon }}</span>
-                                                {{ $unit->status == 'OPEN' ? 'Buka' : ($unit->status == 'CLOSED' ? 'Tutup' : 'Penuh') }}
-                                            </span>
-                                            <span class="badge bg-light-{{ $activeColor }} text-{{ $activeColor }} 
-                                                   rounded-pill px-2" style="font-size: 10px;">
-                                                {{ $activeStatus }}
-                                            </span>
-                                        </div>
-                                    </td>
-                                    
-                                    <!-- Actions Column -->
-                                    <td class="text-end pe-4">
-                                        <div class="d-flex justify-content-end gap-1">
-                                            <a href="{{ route('admin.units.show', $unit->id) }}" 
-                                               class="btn btn-sm btn-outline-primary rounded-3 px-3 d-flex align-items-center gap-1"
-                                               title="Detail">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" 
-                                                     fill="none" stroke="currentColor" stroke-width="2">
-                                                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
-                                                    <circle cx="12" cy="12" r="3"/>
-                                                </svg>
-                                                <span class="d-none d-md-inline">Detail</span>
-                                            </a>
-                                            
-                                            <div class="dropdown">
-                                                <button class="btn btn-sm btn-outline-secondary border-0 rounded-3" 
-                                                        type="button" data-bs-toggle="dropdown">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" 
-                                                         fill="none" stroke="currentColor" stroke-width="2">
-                                                        <circle cx="12" cy="12" r="1"/>
-                                                        <circle cx="12" cy="5" r="1"/>
-                                                        <circle cx="12" cy="19" r="1"/>
-                                                    </svg>
-                                                </button>
-                                                <ul class="dropdown-menu dropdown-menu-end">
-                                                    <li>
-                                                        <a class="dropdown-item d-flex align-items-center gap-2" 
-                                                           href="{{ route('admin.units.edit', $unit->id) }}">
-                                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" 
-                                                                 fill="none" stroke="currentColor" stroke-width="2">
-                                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                                                            </svg>
-                                                            Edit
-                                                        </a>
-                                                    </li>
-                                                    <li>
-                                                        <hr class="dropdown-divider">
-                                                    </li>
-                                                    <li>
-                                                        <form action="{{ route('admin.units.destroy', $unit->id) }}" method="POST" 
-                                                              onsubmit="return confirm('Apakah Anda yakin ingin menghapus unit ini?')">
-                                                            @csrf
-                                                            @method('DELETE')
-                                                            <button type="submit" class="dropdown-item d-flex align-items-center gap-2 text-danger">
-                                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" 
-                                                                     fill="none" stroke="currentColor" stroke-width="2">
-                                                                    <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                                                                </svg>
-                                                                Hapus
-                                                            </button>
-                                                        </form>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        @else
-                            <tr>
-                                <td colspan="5" class="text-center py-5">
-                                    <div class="py-4">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" 
-                                             fill="none" stroke="currentColor" stroke-width="1.5" class="text-muted mb-3">
-                                            <path d="M14 3v4a1 1 0 0 0 1 1h4"/>
-                                            <path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/>
-                                            <path d="M9 9h1"/>
-                                            <path d="M9 13h6"/>
-                                            <path d="M9 17h6"/>
-                                        </svg>
-                                        <h6 class="fw-medium mb-2">Tidak ada unit ditemukan</h6>
-                                        <p class="text-muted mb-3" style="font-size: 14px;">
-                                            @if(request('status') || request('type') || request('search'))
-                                                Coba ubah filter pencarian Anda
-                                            @else
-                                                Mulai dengan menambahkan unit pertama
-                                            @endif
-                                        </p>
-                                        @if(request('status') || request('type') || request('search'))
-                                            <a href="{{ route('admin.units.view') }}" class="btn btn-outline-primary btn-sm rounded-3">
-                                                Reset Filter
-                                            </a>
-                                        @else
-                                            <a href="{{ route('admin.units.create') }}" class="btn btn-primary btn-sm rounded-3">
-                                                Tambah Unit
-                                            </a>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @endif
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Pagination yang Diperbaiki -->
-            @if($units->hasPages())
-                <div class="card-footer border-0 bg-transparent py-3">
-                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center">
-                        <div class="mb-2 mb-md-0">
-                            <p class="text-muted mb-0" style="font-size: 13px;">
-                                Menampilkan {{ $units->firstItem() ?? 0 }} - {{ $units->lastItem() ?? 0 }} 
-                                dari {{ $units->total() }} unit
-                            </p>
-                        </div>
-                        
-                        <nav aria-label="Page navigation">
-                            <ul class="pagination pagination-sm mb-0">
-                                {{-- Previous Page Link --}}
-                                <li class="page-item {{ $units->onFirstPage() ? 'disabled' : '' }}">
-                                    <a class="page-link rounded-3 border-0 {{ $units->onFirstPage() ? 'text-muted' : '' }}" 
-                                       href="{{ $units->previousPageUrl() }}" 
-                                       aria-label="Previous" style="padding: 0.25rem 0.5rem;">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" 
-                                             fill="none" stroke="currentColor" stroke-width="2">
-                                            <polyline points="15 18 9 12 15 6"/>
-                                        </svg>
-                                    </a>
-                                </li>
-
-                                {{-- Pagination Elements --}}
-                                @php
-                                    $current = $units->currentPage();
-                                    $last = $units->lastPage();
-                                    $start = max(1, $current - 2);
-                                    $end = min($last, $current + 2);
-                                    
-                                    if($end - $start < 4) {
-                                        if($start == 1) {
-                                            $end = min($last, $start + 4);
-                                        } else {
-                                            $start = max(1, $end - 4);
-                                        }
-                                    }
-                                @endphp
-
-                                {{-- First Page Link --}}
-                                @if($start > 1)
-                                    <li class="page-item">
-                                        <a class="page-link rounded-3 border-0" 
-                                           href="{{ $units->url(1) }}" 
-                                           style="padding: 0.25rem 0.5rem;">1</a>
-                                    </li>
-                                    @if($start > 2)
-                                        <li class="page-item disabled">
-                                            <span class="page-link border-0" style="padding: 0.25rem 0.5rem;">...</span>
-                                        </li>
-                                    @endif
-                                @endif
-
-                                {{-- Page Number Links --}}
-                                @for($i = $start; $i <= $end; $i++)
-                                    <li class="page-item {{ $i == $current ? 'active' : '' }}">
-                                        <a class="page-link rounded-3 border-0 {{ $i == $current ? 'bg-primary text-white' : '' }}" 
-                                           href="{{ $units->url($i) }}" 
-                                           style="padding: 0.25rem 0.5rem;">
-                                            {{ $i }}
-                                        </a>
-                                    </li>
-                                @endfor
-
-                                {{-- Last Page Link --}}
-                                @if($end < $last)
-                                    @if($end < $last - 1)
-                                        <li class="page-item disabled">
-                                            <span class="page-link border-0" style="padding: 0.25rem 0.5rem;">...</span>
-                                        </li>
-                                    @endif
-                                    <li class="page-item">
-                                        <a class="page-link rounded-3 border-0" 
-                                           href="{{ $units->url($last) }}" 
-                                           style="padding: 0.25rem 0.5rem;">
-                                            {{ $last }}
-                                        </a>
-                                    </li>
-                                @endif
-
-                                {{-- Next Page Link --}}
-                                <li class="page-item {{ $units->hasMorePages() ? '' : 'disabled' }}">
-                                    <a class="page-link rounded-3 border-0 {{ $units->hasMorePages() ? '' : 'text-muted' }}" 
-                                       href="{{ $units->nextPageUrl() }}" 
-                                       aria-label="Next" style="padding: 0.25rem 0.5rem;">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" 
-                                             fill="none" stroke="currentColor" stroke-width="2">
-                                            <polyline points="9 18 15 12 9 6"/>
-                                        </svg>
-                                    </a>
-                                </li>
-                            </ul>
-                        </nav>
-                    </div>
-                </div>
-            @endif
-        </div>
+<div class="card border-0 shadow-sm rounded-4">
+    <div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead class="bg-light">
+                <tr class="text-muted text-uppercase" style="font-size: .75rem; letter-spacing: 0.5px;">
+                    <th class="ps-4 py-3 fw-semibold">Unit</th>
+                    <th class="py-3 fw-semibold">Type</th>
+                    <th class="py-3 fw-semibold">Status</th>
+                    <th class="py-3 fw-semibold">Capacity</th>
+                    <th class="pe-4 py-3 fw-semibold text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @include('admin.units.partials.units_rows')
+            </tbody>
+        </table>
     </div>
 
-    <style>
-        .table th {
-            font-weight: 600;
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #6c757d;
-            border-bottom: 2px solid #e9ecef;
-            padding: 12px 16px;
-        }
-        
-        .table td {
-            padding: 16px;
-            border-bottom: 1px solid #f0f0f0;
-            vertical-align: middle;
-        }
-        
-        .table-hover tbody tr:hover {
-            background-color: rgba(59, 130, 246, 0.03);
-        }
-        
-        .card {
-            border: 1px solid rgba(0,0,0,0.08);
-        }
-        
-        .pagination .page-link {
-            min-width: 32px;
-            text-align: center;
-            margin: 0 2px;
-        }
-        
-        .pagination .page-item.active .page-link {
-            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
-        }
-        
-        .input-group-text {
-            background-color: transparent;
-        }
-        
-        .form-control, .form-select {
-            border-color: rgba(0,0,0,0.1);
-        }
-        
-        .form-control:focus, .form-select:focus {
-            border-color: #86b7fe;
-            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
-        }
-        
-        .btn-sm {
-            padding: 0.25rem 0.75rem;
-            font-size: 0.8125rem;
-        }
-        
-        .badge {
-            font-weight: 500;
-        }
-        
-        /* Collapse animation */
-        .collapse {
-            transition: all 0.3s ease;
-        }
-        
-        /* Quick search focus */
-        #quickSearch:focus {
-            width: 250px;
-            transition: width 0.3s ease;
-        }
-        
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .table-responsive {
-                border-radius: 0;
-            }
-            
-            .table th, .table td {
-                padding: 12px 8px;
-            }
-            
-            .btn span {
-                display: none;
-            }
-            
-            .btn svg {
-                margin: 0;
-            }
-        }
-    </style>
+    <div class="px-4 py-3 border-top">
+        @include('admin.units.partials.pagination', ['units' => $units])
+    </div>
+</div>
 
-    <script>
-        // Quick search functionality
-        document.getElementById('quickSearch')?.addEventListener('keypress', function(e) {
-            if(e.key === 'Enter') {
-                const searchTerm = this.value;
-                const url = new URL(window.location.href);
-                url.searchParams.set('search', searchTerm);
-                window.location.href = url.toString();
-            }
+<style>
+    .btn {
+        transition: all 0.2s ease;
+        border-radius: 50px;
+        font-weight: 500;
+    }
+
+    .btn-filter,
+    .btn-export {
+        color: #374151 !important;
+        background-color: white;
+        border: 1px solid #d1d5db;
+    }
+
+    .btn-filter:hover,
+    .btn-export:hover,
+    .btn-filter:active,
+    .btn-export:active,
+    .btn-filter:focus,
+    .btn-export:focus,
+    .btn-filter.show,
+    .btn-export.show {
+        color: #374151 !important;
+        background-color: #f9fafb !important;
+        border-color: #9ca3af !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    }
+
+    .dropdown-toggle::after {
+        color: #6b7280;
+    }
+
+    .btn-filter:hover .dropdown-toggle::after,
+    .btn-export:hover .dropdown-toggle::after {
+        color: #374151;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        border: none;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.3);
+        background: linear-gradient(135deg, #1d4ed8, #1e40af);
+    }
+
+    #searchInput {
+        border-color: #d1d5db !important;
+        transition: all 0.2s ease;
+    }
+
+    #searchInput:focus {
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+        outline: none;
+    }
+
+    .dropdown-menu {
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+        opacity: 0;
+        transform: translateY(-10px);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        display: block;
+        pointer-events: none;
+    }
+
+    .dropdown-menu.show {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+
+    .filter-badge {
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+
+    .filter-badge:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .table {
+        --bs-table-bg: transparent;
+        --bs-table-striped-bg: rgba(59, 130, 246, 0.02);
+        --bs-table-hover-bg: rgba(59, 130, 246, 0.04);
+    }
+
+    .table> :not(:first-child) {
+        border-top: 2px solid #e5e7eb;
+    }
+
+    .btn-reset {
+        background-color: #fee2e2;
+        color: #dc2626;
+        border: 1px solid #fecaca;
+        transition: all 0.2s ease;
+    }
+
+    .btn-reset:hover {
+        background-color: #fecaca;
+        color: #b91c1c;
+        border-color: #fca5a5;
+        transform: translateY(-1px);
+    }
+
+    .card {
+        border: 1px solid #e5e7eb;
+        overflow: hidden;
+    }
+
+    .dropdown-item {
+        color: #374151 !important;
+        transition: all 0.15s ease;
+    }
+
+    .dropdown-item:hover,
+    .dropdown-item:focus {
+        color: #1f2937 !important;
+        background-color: #f9fafb;
+        transform: translateX(2px);
+    }
+
+    .btn-filter.show,
+    .btn-export.show {
+        background-color: #f3f4f6 !important;
+    }
+
+    @media (max-width: 768px) {
+        .d-flex.justify-content-between.align-items-center.gap-3 {
+            flex-direction: column;
+            gap: 1rem !important;
+        }
+
+        .position-relative {
+            max-width: 100% !important;
+            width: 100%;
+        }
+
+        .d-flex.align-items-center.gap-2 {
+            width: 100%;
+            justify-content: flex-start;
+            flex-wrap: wrap;
+        }
+
+        .btn span {
+            display: inline-block;
+        }
+    }
+</style>
+
+<script>
+    let searchTimeout;
+    document.getElementById('searchInput')?.addEventListener('input', function (e) {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            performSearch();
+        }, 500);
+    });
+
+    function performSearch() {
+        const searchTerm = document.getElementById('searchInput').value;
+        const url = new URL(window.location.href);
+
+        if (searchTerm) {
+            url.searchParams.set('search', searchTerm);
+        } else {
+            url.searchParams.delete('search');
+        }
+
+        url.searchParams.set('page', '1');
+        window.location.href = url.toString();
+    }
+
+    function clearFilters() {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('status');
+        url.searchParams.delete('type');
+        url.searchParams.set('page', '1');
+        window.location.href = url.toString();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        updateFilterIndicator();
+
+        document.querySelectorAll('.filter-badge').forEach(badge => {
+            badge.addEventListener('click', function (e) {
+                e.preventDefault();
+                window.location.href = this.href;
+            });
         });
-        
-        // Auto-close filter collapse on mobile after apply
-        if(window.innerWidth < 768) {
-            document.querySelectorAll('#filterCollapse form button[type="submit"]').forEach(button => {
-                button.addEventListener('click', function() {
-                    setTimeout(() => {
-                        const collapse = document.getElementById('filterCollapse');
-                        const bsCollapse = new bootstrap.Collapse(collapse, {
-                            toggle: false
-                        });
-                        bsCollapse.hide();
-                    }, 500);
-                });
+
+        const filterBtn = document.querySelector('.btn-filter');
+        const exportBtn = document.querySelector('.btn-export');
+
+        if (filterBtn) {
+            filterBtn.addEventListener('click', function () {
+                this.style.color = '#374151';
+            });
+
+            filterBtn.addEventListener('show.bs.dropdown', function () {
+                this.style.color = '#374151';
             });
         }
-    </script>
+
+        if (exportBtn) {
+            exportBtn.addEventListener('click', function () {
+                this.style.color = '#374151';
+            });
+
+            exportBtn.addEventListener('show.bs.dropdown', function () {
+                this.style.color = '#374151';
+            });
+        }
+
+        const dropdowns = document.querySelectorAll('.dropdown');
+        dropdowns.forEach(dropdown => {
+            const toggle = dropdown.querySelector('.dropdown-toggle');
+            const menu = dropdown.querySelector('.dropdown-menu');
+
+            toggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const isShown = menu.classList.contains('show');
+                
+                document.querySelectorAll('.dropdown-menu.show').forEach(openMenu => {
+                    if (openMenu !== menu) {
+                        openMenu.classList.remove('show');
+                    }
+                });
+                
+                if (!isShown) {
+                    menu.classList.add('show');
+                } else {
+                    menu.classList.remove('show');
+                }
+            });
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.dropdown')) {
+                document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+                    menu.classList.remove('show');
+                });
+            }
+        });
+    });
+
+    function updateFilterIndicator() {
+        const filterBtn = document.getElementById('filterDropdown');
+        const filterText = document.getElementById('filterText');
+        const status = new URLSearchParams(window.location.search).get('status');
+        const type = new URLSearchParams(window.location.search).get('type');
+
+        if (!filterBtn || !filterText) return;
+
+        let indicator = filterBtn.querySelector('.badge');
+
+        if (status || type) {
+            let text = 'Filter';
+            if (status && type) {
+                text += `: ${getStatusLabel(status)}, ${type}`;
+            } else if (status) {
+                text += `: ${getStatusLabel(status)}`;
+            } else if (type) {
+                text += `: ${type}`;
+            }
+
+            filterText.textContent = text;
+
+            if (!indicator) {
+                indicator = document.createElement('span');
+                indicator.className = 'badge bg-primary rounded-circle ms-1';
+                indicator.style.cssText = 'width: 6px; height: 6px;';
+                filterBtn.appendChild(indicator);
+            }
+        } else {
+            filterText.textContent = 'Filter';
+
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+    }
+
+    function getStatusLabel(status) {
+        const labels = {
+            'OPEN': 'Open',
+            'CLOSED': 'Closed',
+            'FULL': 'Full'
+        };
+        return labels[status] || status;
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const style = document.createElement('style');
+        style.textContent = `
+            .btn-filter:hover span,
+            .btn-filter:active span,
+            .btn-filter.show span,
+            .btn-export:hover span,
+            .btn-export:active span,
+            .btn-export.show span {
+                color: #374151 !important;
+            }
+
+            .btn-filter:hover svg,
+            .btn-filter:active svg,
+            .btn-filter.show svg,
+            .btn-export:hover svg,
+            .btn-export:active svg,
+            .btn-export.show svg {
+                stroke: #374151 !important;
+            }
+
+            .btn-filter,
+            .btn-export {
+                color: #374151 !important;
+            }
+        `;
+        document.head.appendChild(style);
+    });
+</script>
 @endsection
