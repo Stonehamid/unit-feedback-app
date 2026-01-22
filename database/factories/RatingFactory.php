@@ -2,22 +2,40 @@
 
 namespace Database\Factories;
 
+use App\Models\Rating;
+use App\Models\Unit;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class RatingFactory extends Factory
 {
-    public function definition(): array
+    protected $model = Rating::class;
+
+    public function definition()
     {
         return [
-            'reviewer_name' => $this->faker->name(),
-            'rating' => $this->faker->numberBetween(1, 5),
-            'comment' => $this->faker->boolean(70) ? $this->faker->sentence(10) : null,
-            'is_approved' => $this->faker->boolean(85),
-            'approved_at' => $this->faker->optional(0.8)->dateTimeBetween('-1 year', 'now'),
-            'approved_by' => null,
-            'rejection_reason' => null,
-            'admin_notes' => $this->faker->boolean(30) ? $this->faker->sentence() : null,
-            'created_at' => $this->faker->dateTimeBetween('-1 year', 'now'),
+            'unit_id' => Unit::factory(),
+            'session_id' => $this->faker->uuid(),
+            'visitor_ip' => $this->faker->ipv4(),
+            'user_agent' => $this->faker->userAgent(),
+            'komentar' => $this->faker->optional(0.7)->paragraph(),
+            'status' => $this->faker->randomElement(['pending', 'dibalas', 'selesai']),
+            'metadata' => ['device' => $this->faker->randomElement(['mobile', 'desktop', 'tablet'])],
+            'dibalas_pada' => $this->faker->optional(0.3)->dateTimeBetween('-1 month', 'now'),
         ];
+    }
+
+    public function pending()
+    {
+        return $this->state([
+            'status' => 'pending',
+        ]);
+    }
+
+    public function dibalas()
+    {
+        return $this->state([
+            'status' => 'dibalas',
+            'dibalas_pada' => $this->faker->dateTimeBetween('-1 month', 'now'),
+        ]);
     }
 }

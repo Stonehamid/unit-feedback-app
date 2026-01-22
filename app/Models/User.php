@@ -3,20 +3,22 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes; 
+
+    protected $table = 'users';
 
     protected $fillable = [
-        'name',
+        'nama',
         'email',
         'password',
         'role',
-        'photo', 
     ];
 
     protected $hidden = [
@@ -27,33 +29,26 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'deleted_at' => 'datetime',
     ];
-    public function ratings()
-    {
-        return $this->hasMany(Rating::class, 'reviewer_name', 'name');
-    }
 
     public function messages()
     {
-        return $this->hasMany(Message::class, 'name', 'name');
+        return $this->hasMany(Message::class, 'admin_id');
     }
+
     public function reports()
     {
         return $this->hasMany(Report::class, 'admin_id');
     }
 
-    public function approvedRatings()
+    public function isSuperAdmin()
     {
-        return $this->hasMany(Rating::class, 'approved_by');
+        return $this->role === 'super_admin';
     }
 
-    public function isAdmin(): bool
+    public function isAdmin()
     {
-        return $this->role === 'admin';
-    }
-
-    public function isReviewer(): bool
-    {
-        return $this->role === 'reviewer';
+        return in_array($this->role, ['admin', 'super_admin']);
     }
 }

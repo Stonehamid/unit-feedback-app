@@ -9,43 +9,65 @@ class Report extends Model
 {
     use HasFactory;
 
+    protected $table = 'reports';
+
     protected $fillable = [
-        'admin_id',
         'unit_id',
-        'title',
-        'content',
+        'session_id',
+        'visitor_ip',
+        'judul',
+        'deskripsi',
+        'tipe',
+        'prioritas',
+        'status',
+        'admin_id',
+        'tanggapan_admin',
+        'ditanggapi_pada',
+        'lampiran',
     ];
 
-    /**
-     * Get the admin who created the report
-     */
-    public function admin()
-    {
-        return $this->belongsTo(User::class, 'admin_id');
-    }
+    protected $casts = [
+        'lampiran' => 'array',
+        'ditanggapi_pada' => 'datetime',
+    ];
 
-    /**
-     * Get the unit that the report is about
-     */
     public function unit()
     {
         return $this->belongsTo(Unit::class);
     }
 
-    /**
-     * Scope untuk laporan bulan ini
-     */
-    public function scopeThisMonth($query)
+    public function admin()
     {
-        return $query->whereMonth('created_at', now()->month)
-                     ->whereYear('created_at', now()->year);
+        return $this->belongsTo(User::class, 'admin_id');
     }
 
-    /**
-     * Scope untuk laporan berdasarkan unit
-     */
-    public function scopeByUnit($query, $unitId)
+    public function session()
     {
-        return $query->where('unit_id', $unitId);
+        return $this->belongsTo(VisitorSession::class, 'session_id', 'session_id');
+    }
+
+    public function scopeBaru($query)
+    {
+        return $query->where('status', 'baru');
+    }
+
+    public function scopeDiproses($query)
+    {
+        return $query->where('status', 'diproses');
+    }
+
+    public function scopePrioritasTinggi($query)
+    {
+        return $query->whereIn('prioritas', ['tinggi', 'kritis']);
+    }
+
+    public function scopeBelumDitanggapi($query)
+    {
+        return $query->whereNull('admin_id');
+    }
+
+    public function isBelumDitanggapi()
+    {
+        return $this->status === 'baru' && !$this->admin_id;
     }
 }

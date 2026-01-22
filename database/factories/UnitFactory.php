@@ -2,31 +2,48 @@
 
 namespace Database\Factories;
 
+use App\Models\Unit;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class UnitFactory extends Factory
 {
-    public function definition(): array
-    {
-        $types = ['Administration', 'Service', 'Support', 'Technical', 'Customer Service'];
-        $statuses = ['OPEN', 'CLOSED', 'FULL'];
+    protected $model = Unit::class;
 
+    public function definition()
+    {
+        $jenis = $this->faker->randomElement(['kesehatan', 'akademik', 'administrasi', 'fasilitas', 'lainnya']);
+        
         return [
-            'name' => $this->faker->company() . ' Unit',
-            'officer_name' => $this->faker->name(),
-            'type' => $this->faker->randomElement($types),
-            'description' => $this->faker->paragraph(3),
-            'location' => $this->faker->streetAddress(),
-            'status' => $this->faker->randomElement($statuses),
-            'photo' => null,
-            'avg_rating' => $this->faker->randomFloat(2, 1, 5),
-            'is_active' => $this->faker->boolean(85),
-            'featured' => $this->faker->boolean(20),
-            'contact_email' => $this->faker->companyEmail(),
-            'contact_phone' => $this->faker->phoneNumber(),
-            'opening_time' => $this->faker->time('07:00'),
-            'closing_time' => $this->faker->time('17:00'),
-            'status_changed_at' => $this->faker->dateTimeThisMonth(),
+            'kode_unit' => strtoupper($this->faker->bothify('??-###')),
+            'nama_unit' => $this->faker->company() . ' ' . ucfirst($jenis),
+            'deskripsi' => $this->faker->paragraph(),
+            'jenis_unit' => $jenis,
+            'lokasi' => $this->faker->streetAddress(),
+            'gedung' => $this->faker->buildingNumber(),
+            'lantai' => $this->faker->randomElement(['1', '2', '3', '4', '5']),
+            'kontak_telepon' => $this->faker->phoneNumber(),
+            'kontak_email' => $this->faker->companyEmail(),
+            'jam_buka' => $this->faker->time('H:i:s'),
+            'jam_tutup' => $this->faker->time('H:i:s'),
+            'kapasitas' => $this->faker->numberBetween(10, 500),
+            'status_aktif' => $this->faker->boolean(90),
+            'metadata' => ['info_tambahan' => $this->faker->sentence()],
         ];
+    }
+
+    public function kesehatan()
+    {
+        return $this->state([
+            'jenis_unit' => 'kesehatan',
+            'nama_unit' => 'Unit Kesehatan ' . $this->faker->company(),
+        ]);
+    }
+
+    public function akademik()
+    {
+        return $this->state([
+            'jenis_unit' => 'akademik',
+            'nama_unit' => 'Fakultas ' . $this->faker->word(),
+        ]);
     }
 }

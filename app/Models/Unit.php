@@ -2,50 +2,54 @@
 
 namespace App\Models;
 
-use Database\Factories\UnitFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Model;
 
 class Unit extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
+
+    protected $table = 'units';
 
     protected $fillable = [
-        'name',
-        'officer_name',
-        'type',
-        'description',
-        'location',
-        'status',
-        'photo',
-        'avg_rating',
-        'is_active',
-        'featured',
-        'contact_email',
-        'contact_phone',
-        'opening_time',
-        'closing_time',
-        'status_changed_at'
+        'kode_unit',
+        'nama_unit',
+        'deskripsi',
+        'jenis_unit',
+        'lokasi',
+        'gedung',
+        'lantai',
+        'kontak_telepon',
+        'kontak_email',
+        'jam_buka',
+        'jam_tutup',
+        'kapasitas',
+        'status_aktif',
+        'metadata',
     ];
 
     protected $casts = [
-        'avg_rating' => 'decimal:2',
-        'is_active' => 'boolean',
-        'featured' => 'boolean',
-        'opening_time' => 'datetime:H:i',
-        'closing_time' => 'datetime:H:i',
-        'status_changed_at' => 'datetime'
+        'metadata' => 'array',
+        'jam_buka' => 'datetime:H:i:s',
+        'jam_tutup' => 'datetime:H:i:s',
+        'status_aktif' => 'boolean',
+        'deleted_at' => 'datetime',
     ];
+
+    public function employees()
+    {
+        return $this->hasMany(Employee::class);
+    }
 
     public function ratings()
     {
         return $this->hasMany(Rating::class);
     }
 
-    public function messages()
+    public function ratingCategories()
     {
-        return $this->hasMany(Message::class);
+        return $this->hasMany(RatingCategory::class);
     }
 
     public function reports()
@@ -53,117 +57,23 @@ class Unit extends Model
         return $this->hasMany(Report::class);
     }
 
-    public function scopeByType($query, $type)
+    public function messages()
     {
-        return $query->where('type', $type);
+        return $this->hasMany(Message::class);
     }
 
-    public function scopeHighRated($query, $threshold = 4.0)
+    public function visits()
     {
-        return $query->where('avg_rating', '>=', $threshold);
+        return $this->hasMany(UnitVisit::class);
     }
 
-    public function scopeOpen($query)
+    public function scopeAktif($query)
     {
-        return $query->where('status', 'OPEN')->where('is_active', true);
-    }
-    
-    public function scopeClosed($query)
-    {
-        return $query->where('status', 'CLOSED');
-    }
-    
-    public function scopeFull($query)
-    {
-        return $query->where('status', 'FULL');
+        return $query->where('status_aktif', true);
     }
 
-    public function scopeActive($query)
+    public function scopeJenis($query, $jenis)
     {
-        return $query->where('is_active', true);
-    }
-
-    public function scopeFeatured($query)
-    {
-        return $query->where('featured', true)->where('is_active', true);
-    }
-
-    public function getStatusLabelAttribute()
-    {
-        return match($this->status) {
-            'OPEN' => 'Buka',
-            'CLOSED' => 'Tutup',
-            'FULL' => 'Penuh',
-            default => $this->status,
-        };
-    }
-    
-    public function getStatusColorAttribute()
-    {
-        return match($this->status) {
-            'OPEN' => 'success',
-            'CLOSED' => 'danger',
-            'FULL' => 'warning',
-            default => 'secondary',
-        };
-    }
-
-    public function getOperatingHoursAttribute()
-    {
-        if ($this->opening_time && $this->closing_time) {
-            return date('H:i', strtotime($this->opening_time)) . ' - ' . date('H:i', strtotime($this->closing_time));
-        }
-        return null;
-    }
-
-    public function getIsOperatingAttribute()
-    {
-        if ($this->status !== 'OPEN' || !$this->is_active) {
-            return false;
-        }
-
-        if (!$this->opening_time || !$this->closing_time) {
-            return true;
-        }
-
-        $currentTime = now()->format('H:i:s');
-        return $currentTime >= $this->opening_time && $currentTime <= $this->closing_time;
-    }
-
-    public function updateAverageRating()
-    {
-        $avgRating = $this->ratings()
-            ->where('is_approved', true)
-            ->avg('rating');
-
-        $this->update(['avg_rating' => round($avgRating ?: 0, 2)]);
-    }
-
-    public function updateStatus($newStatus)
-    {
-        $this->update([
-            'status' => $newStatus,
-            'status_changed_at' => now()
-        ]);
-    }
-
-    public function markAsFull()
-    {
-        $this->updateStatus('FULL');
-    }
-
-    public function markAsOpen()
-    {
-        $this->updateStatus('OPEN');
-    }
-
-    public function markAsClosed()
-    {
-        $this->updateStatus('CLOSED');
-    }
-
-    protected static function newFactory(): Factory
-    {
-        return UnitFactory::new();
+        return $query->where('jenis_unit', $jenis);
     }
 }

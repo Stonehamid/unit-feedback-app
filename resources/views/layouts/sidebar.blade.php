@@ -2,20 +2,24 @@
   <!-- Sidebar scroll-->
   <div>
     <div class="brand-logo d-flex align-items-center justify-content-between">
-      <a href="./index.html" class="text-nowrap logo-img">
-        <img src="{{ asset('assets/images/logos/logo.svg')}}" alt="" />
+      <a href="{{ url('/admin/dashboard') }}" class="text-nowrap logo-img">
+        <img src="{{ asset('assets/images/logos/logo.svg')}}" alt="Unit Rating Feedback" />
       </a>
       <div class="close-btn d-xl-none d-block sidebartoggler cursor-pointer" id="sidebarCollapse">
         <i class="ti ti-x fs-8"></i>
       </div>
     </div>
+    
     <!-- Sidebar navigation-->
     <nav class="sidebar-nav scroll-sidebar" data-simplebar="">
       <ul id="sidebarnav">
+        
+        <!-- Home Section -->
         <li class="nav-small-cap">
-          <iconify-icon icon="solar:menu-dots-linear" class="nav-small-cap-icon fs-4"></iconify-icon>
-          <span class="hide-menu">Home</span>
+          <iconify-icon icon="solar:home-smile-linear" class="nav-small-cap-icon fs-4"></iconify-icon>
+          <span class="hide-menu">Dashboard</span>
         </li>
+        
         <li class="sidebar-item">
           <a class="sidebar-link primary-hover-bg" href="{{ url('/admin/dashboard') }}" aria-expanded="false">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
@@ -25,24 +29,17 @@
             <span class="hide-menu">Dashboard</span>
           </a>
         </li>
+        
         <li>
           <span class="sidebar-divider lg"></span>
         </li>
+        
+        <!-- Unit Management Section -->
         <li class="nav-small-cap">
-          <iconify-icon icon="solar:menu-dots-linear" class="nav-small-cap-icon fs-4"></iconify-icon>
-          <span class="hide-menu">Management</span>
+          <iconify-icon icon="solar:buildings-2-linear" class="nav-small-cap-icon fs-4"></iconify-icon>
+          <span class="hide-menu">Unit Management</span>
         </li>
-        <li class="sidebar-item">
-          <a class="sidebar-link primary-hover-bg" href="{{ url('/admin/messages') }}" aria-expanded="false">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-              <g fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1">
-                <path d="M19.5 4.5h-18l3 5v7a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-9a3 3 0 0 0-3-3Z" />
-                <path stroke-linecap="round" d="M7.5 8h12m-12 3.5h12M7.5 15H16" />
-              </g>
-            </svg>
-            <span class="hide-menu">Messages</span>
-          </a>
-        </li>
+        
         <li class="sidebar-item">
           <a class="sidebar-link primary-hover-bg" href="{{ url('/admin/units') }}" aria-expanded="false">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
@@ -56,24 +53,105 @@
             <span class="hide-menu">Units</span>
           </a>
         </li>
+        
         <li class="sidebar-item">
-          <a class="sidebar-link primary-hover-bg" href="{{ url('/admin/users') }}" aria-expanded="false">
+          <a class="sidebar-link primary-hover-bg" href="{{ url('/admin/employees') }}" aria-expanded="false">
             <iconify-icon icon="solar:users-group-rounded-line-duotone"></iconify-icon>
-            <span class="hide-menu">Users</span>
+            <span class="hide-menu">Employees</span>
           </a>
         </li>
+        
+        <li class="sidebar-item">
+          <a class="sidebar-link primary-hover-bg" href="{{ url('/admin/messages') }}" aria-expanded="false">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+              <g fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1">
+                <path d="M19.5 4.5h-18l3 5v7a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-9a3 3 0 0 0-3-3Z" />
+                <path stroke-linecap="round" d="M7.5 8h12m-12 3.5h12M7.5 15H16" />
+              </g>
+            </svg>
+            <span class="hide-menu">Messages</span>
+          </a>
+        </li>
+        
+        <li>
+          <span class="sidebar-divider lg"></span>
+        </li>
+        
+        <!-- Feedback Management Section -->
+        <li class="nav-small-cap">
+          <iconify-icon icon="solar:chat-line-linear" class="nav-small-cap-icon fs-4"></iconify-icon>
+          <span class="hide-menu">Feedback Management</span>
+        </li>
+        
         <li class="sidebar-item">
           <a class="sidebar-link primary-hover-bg" href="{{ url('/admin/ratings') }}" aria-expanded="false">
             <iconify-icon icon="solar:star-line-duotone"></iconify-icon>
             <span class="hide-menu">Ratings</span>
           </a>
         </li>
+        
         <li class="sidebar-item">
           <a class="sidebar-link primary-hover-bg" href="{{ url('/admin/reports') }}" aria-expanded="false">
             <iconify-icon icon="solar:danger-circle-line-duotone"></iconify-icon>
             <span class="hide-menu">Reports</span>
           </a>
         </li>
+        
+        <li>
+          <span class="sidebar-divider lg"></span>
+        </li>
+        
+        <!-- Analytics & Reports Section -->
+        <li class="nav-small-cap">
+          <iconify-icon icon="solar:chart-2-linear" class="nav-small-cap-icon fs-4"></iconify-icon>
+          <span class="hide-menu">Analytics & Reports</span>
+        </li>
+        
+        <li class="sidebar-item">
+          <a class="sidebar-link primary-hover-bg" href="{{ url('/admin/analytics') }}" aria-expanded="false">
+            <iconify-icon icon="solar:chart-line-duotone"></iconify-icon>
+            <span class="hide-menu">Analytics</span>
+          </a>
+        </li>
+        
+        <li class="sidebar-item">
+          <a class="sidebar-link primary-hover-bg" href="{{ url('/admin/export') }}" aria-expanded="false">
+            <iconify-icon icon="solar:export-line-duotone"></iconify-icon>
+            <span class="hide-menu">Export Data</span>
+          </a>
+        </li>
+        
+        <li>
+          <span class="sidebar-divider lg"></span>
+        </li>
+        
+        <!-- System Section -->
+        <li class="nav-small-cap">
+          <iconify-icon icon="solar:settings-linear" class="nav-small-cap-icon fs-4"></iconify-icon>
+          <span class="hide-menu">System</span>
+        </li>
+        
+        <li class="sidebar-item">
+          <a class="sidebar-link primary-hover-bg" href="{{ url('/admin/users') }}" aria-expanded="false">
+            <iconify-icon icon="solar:user-rounded-line-duotone"></iconify-icon>
+            <span class="hide-menu">Admin Users</span>
+          </a>
+        </li>
+        
+        <li class="sidebar-item">
+          <a class="sidebar-link primary-hover-bg" href="{{ url('/admin/settings') }}" aria-expanded="false">
+            <iconify-icon icon="solar:settings-line-duotone"></iconify-icon>
+            <span class="hide-menu">Settings</span>
+          </a>
+        </li>
+        
+        <li class="sidebar-item">
+          <a class="sidebar-link primary-hover-bg" href="{{ url('/admin/audit-logs') }}" aria-expanded="false">
+            <iconify-icon icon="solar:document-text-line-duotone"></iconify-icon>
+            <span class="hide-menu">Audit Logs</span>
+          </a>
+        </li>
+        
       </ul>
     </nav>
   </div>

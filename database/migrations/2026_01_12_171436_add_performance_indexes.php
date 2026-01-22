@@ -6,75 +6,67 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up(): void
+    public function up()
     {
         Schema::table('ratings', function (Blueprint $table) {
-            $table->index(['unit_id', 'created_at']);
-            $table->index('reviewer_name');
-            $table->index('rating');
-            $table->index('is_approved');
+            $table->index(['created_at', 'unit_id']);
+            $table->index(['status', 'created_at']);
+        });
+
+        Schema::table('rating_scores', function (Blueprint $table) {
+            $table->index(['rating_category_id', 'created_at']);
         });
 
         Schema::table('units', function (Blueprint $table) {
-            $table->index('name');
-            $table->index('type');
-            $table->index('location');
-            $table->index('avg_rating');
-            $table->index('is_active');
-            $table->index('featured');
+            $table->index(['jenis_unit', 'status_aktif']);
+            $table->fulltext(['nama_unit', 'deskripsi', 'lokasi']);
         });
 
-        Schema::table('messages', function (Blueprint $table) {
-            $table->index(['unit_id', 'created_at']);
-            $table->index('name');
+        Schema::table('employees', function (Blueprint $table) {
+            $table->index(['unit_id', 'status']);
+            $table->fulltext(['nama', 'jabatan', 'bidang']);
         });
 
         Schema::table('reports', function (Blueprint $table) {
-            $table->index(['unit_id', 'created_at']);
-            $table->index('admin_id');
-            $table->index('status');
-            $table->index('priority');
+            $table->index(['tipe', 'status', 'created_at']);
+            $table->fulltext(['judul', 'deskripsi']);
         });
 
-        Schema::table('users', function (Blueprint $table) {
-            $table->index('role');
-            $table->index('email');
+        Schema::table('unit_visits', function (Blueprint $table) {
+            $table->index(['tanggal', 'unit_id']);
+            $table->index(['waktu_masuk', 'waktu_keluar']);
         });
     }
 
-    public function down(): void
+    public function down()
     {
         Schema::table('ratings', function (Blueprint $table) {
-            $table->dropIndex(['unit_id', 'created_at']);
-            $table->dropIndex(['reviewer_name']);
-            $table->dropIndex(['rating']);
-            $table->dropIndex(['is_approved']);
+            $table->dropIndex(['created_at', 'unit_id']);
+            $table->dropIndex(['status', 'created_at']);
+        });
+
+        Schema::table('rating_scores', function (Blueprint $table) {
+            $table->dropIndex(['rating_category_id', 'created_at']);
         });
 
         Schema::table('units', function (Blueprint $table) {
-            $table->dropIndex(['name']);
-            $table->dropIndex(['type']);
-            $table->dropIndex(['location']);
-            $table->dropIndex(['avg_rating']);
-            $table->dropIndex(['is_active']);
-            $table->dropIndex(['featured']);
+            $table->dropIndex(['jenis_unit', 'status_aktif']);
+            $table->dropFulltext(['nama_unit', 'deskripsi', 'lokasi']);
         });
 
-        Schema::table('messages', function (Blueprint $table) {
-            $table->dropIndex(['unit_id', 'created_at']);
-            $table->dropIndex(['name']);
+        Schema::table('employees', function (Blueprint $table) {
+            $table->dropIndex(['unit_id', 'status']);
+            $table->dropFulltext(['nama', 'jabatan', 'bidang']);
         });
 
         Schema::table('reports', function (Blueprint $table) {
-            $table->dropIndex(['unit_id', 'created_at']);
-            $table->dropIndex(['admin_id']);
-            $table->dropIndex(['status']);
-            $table->dropIndex(['priority']);
+            $table->dropIndex(['tipe', 'status', 'created_at']);
+            $table->dropFulltext(['judul', 'deskripsi']);
         });
 
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropIndex(['role']);
-            $table->dropIndex(['email']);
+        Schema::table('unit_visits', function (Blueprint $table) {
+            $table->dropIndex(['tanggal', 'unit_id']);
+            $table->dropIndex(['waktu_masuk', 'waktu_keluar']);
         });
     }
 };

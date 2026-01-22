@@ -3,114 +3,101 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Report;
+
+use App\Http\Requests\Admin\Report\ReplyReportRequest;
+use App\Services\Admin\ReportService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use App\Services\Report\ReportFilterService;
-use App\Services\Report\ReportService;
-use App\Services\Report\ReportStatisticsService;
-use App\Services\Report\ReportBulkActionService;
 
 class ReportController extends Controller
 {
-    protected $filterService;
-    protected $reportService;
-    protected $statsService;
-    protected $bulkService;
-    
     public function __construct(
-        ReportFilterService $filterService,
-        ReportService $reportService,
-        ReportStatisticsService $statsService,
-        ReportBulkActionService $bulkService
-    ) {
-        $this->filterService = $filterService;
-        $this->reportService = $reportService;
-        $this->statsService = $statsService;
-        $this->bulkService = $bulkService;
-    }
-    
-    public function index(Request $request)
+        protected ReportService $reportService
+    ) {}
+
+    public function index(Request $request): JsonResponse
     {
-        $query = $this->filterService->buildQuery($request);
-        $reports = $this->filterService->getPagination($query, $request);
-        
-        return [
-            'reports' => $reports,
-            'stats' => $this->statsService->getOverallStats(),
-            'filters' => $request->all(),
-        ];
+        $reports = $this->reportService->getReports($request->all());
+
+        return response()->json([
+            'success' => true,
+            'data' => $reports,
+        ]);
     }
-    
-    public function store(Request $request)
+
+    public function show(string $id): JsonResponse
+    {
+        $report = $this->reportService->getReportDetail($id);
+
+        return response()->json([
+            'success' => true,
+            'data' => $report,
+        ]);
+    }
+
+    public function reply(ReplyReportRequest $request, string $id): JsonResponse
+    {
+        $report = $this->reportService->replyToReport($id, $request->validated());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Laporan berhasil ditanggapi',
+            'data' => $report,
+        ]);
+    }
+
+    public function updateStatus(Request $request, string $id): JsonResponse
     {
         $validated = $request->validate([
-            'unit_id' => 'required|exists:units,id',
-            'title' => 'required|string|max:255',
-            'content' => 'required|string',
-            'type' => 'nullable|string|in:weekly,monthly,quarterly,annual,incident',
-            'priority' => 'nullable|string|in:low,medium,high,critical',
+            'status' => 'required|in:baru,diproses,selesai,ditolak',
         ]);
-        
-        $report = $this->reportService->createReport($validated);
-        
-        return [
-            'report' => $report,
-            'message' => 'Report created successfully'
-        ];
+
+        $report = $this->reportService->updateReportStatus($id, $validated['status']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Status laporan berhasil diperbarui',
+            'data' => $report,
+        ]);
     }
-    
-    public function show(Report $report)
-    {
-        return $this->reportService->getReportWithContext($report);
-    }
-    
-    public function update(Request $request, Report $report)
+
+    public function updatePriority(Request $request, string $id): JsonResponse
     {
         $validated = $request->validate([
-            'title' => 'sometimes|string|max:255',
-            'content' => 'sometimes|string',
-            'type' => 'nullable|string|in:weekly,monthly,quarterly,annual,incident',
-            'priority' => 'nullable|string|in:low,medium,high,critical',
-            'status' => 'nullable|string|in:draft,published,archived',
+            'priority' => 'required|in:rendah,sedang,tinggi,kritis',
         ]);
-        
-        $updatedReport = $this->reportService->updateReport($report, $validated);
-        
-        return [
-            'report' => $updatedReport,
-            'message' => 'Report updated successfully'
-        ];
-    }
-    
-    public function destroy(Report $report)
-    {
-        $this->reportService->deleteReport($report);
-        
-        return [
-            'message' => 'Report deleted successfully'
-        ];
-    }
-    
-    public function bulkAction(Request $request)
-    {
-        $request->validate([
-            'report_ids' => 'required|array',
-            'report_ids.*' => 'exists:reports,id',
-            'action' => 'required|in:delete,archive,publish',
+
+        $report = $this->reportService->updateReportPriority($id, $validated['priority']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Prioritas laporan berhasil diperbarui',
+            'data' => $report,
         ]);
-        
-        $result = $this->bulkService->handleBulkAction(
-            $request->report_ids, 
-            $request->action
-        );
-        
-        return [
-            'message' => $result['message']
-        ];
     }
-    
-    public function statistics()
+
+    public function assign(Request $request, string $id): JsonResponse
     {
-        return $this->statsService->getAdvancedStatistics();
+        $validated = $request->validate([
+            'admin_id' => 'required|exists:users,id',
+        ]);
+
+        $report = $this->reportService->assignReport($id, $validated['admin_id']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Laporan berhasil ditugaskan',
+            'data' => $report,
+        ]);
+    }
+
+    public function stats(): JsonResponse
+    {
+        $stats = $this->reportService->getReportStats();
+
+        return response()->json([
+            'success' => true,
+            'data' => $stats,
+        ]);
     }
 }

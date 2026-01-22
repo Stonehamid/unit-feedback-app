@@ -3,48 +3,42 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Services\Dashboard\DashboardCacheService;
-use App\Services\Dashboard\DashboardStatsService;
+use App\Services\Admin\DashboardService;
+use Illuminate\Http\JsonResponse;
 
 class DashboardController extends Controller
 {
-    protected $cacheService;
-    protected $statsService;
-
     public function __construct(
-        DashboardCacheService $cacheService,
-        DashboardStatsService $statsService
-    ) {
-        $this->cacheService = $cacheService;
-        $this->statsService = $statsService;
+        protected DashboardService $dashboardService
+    ) {}
+
+    public function stats(): JsonResponse
+    {
+        $stats = $this->dashboardService->getDashboardStats();
+
+        return response()->json([
+            'success' => true,
+            'data' => $stats,
+        ]);
     }
 
-    public function index()
+    public function charts(): JsonResponse
     {
-        $stats = $this->cacheService->getCachedStats();
-        return view('admin.dashboard', compact('stats'));
+        $charts = $this->dashboardService->getChartData();
+
+        return response()->json([
+            'success' => true,
+            'data' => $charts,
+        ]);
     }
 
-    public function getStats()
+    public function overview(): JsonResponse
     {
-        return $this->cacheService->getCachedStats();
-    }
+        $overview = $this->dashboardService->getOverviewData();
 
-    public function performance()
-    {
-        return [
-            'metrics' => $this->statsService->getPerformanceMetrics(),
-            'cache_status' => $this->cacheService->getCachedStats(),
-        ];
-    }
-
-    public function clearCache()
-    {
-        $this->cacheService->clearCache();
-
-        return [
-            'message' => 'Dashboard cache cleared successfully',
-            'timestamp' => now()->toDateTimeString(),
-        ];
+        return response()->json([
+            'success' => true,
+            'data' => $overview,
+        ]);
     }
 }

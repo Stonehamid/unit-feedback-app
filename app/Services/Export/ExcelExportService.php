@@ -2,295 +2,296 @@
 
 namespace App\Services\Export;
 
-use Illuminate\Support\Collection;
+use App\Models\Rating;
+use App\Models\Report;
+use App\Models\Unit;
+use App\Models\UnitVisit;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Color;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 
 class ExcelExportService
 {
-    public function exportToExcel(array $data, array $headers, string $filename, string $sheetTitle = 'Sheet1'): string
+    public function exportRatings(array $filters = []): string
     {
+        $query = Rating::with(['unit', 'scores.category']);
+        
+        if (isset($filters['unit_id'])) {
+            $query->where('unit_id', $filters['unit_id']);
+        }
+        
+        if (isset($filters['date_from'])) {
+            $query->whereDate('created_at', '>=', $filters['date_from']);
+        }
+        
+        if (isset($filters['date_to'])) {
+            $query->whereDate('created_at', '<=', $filters['date_to']);
+        }
+        
+        $ratings = $query->orderBy('created_at', 'desc')->get();
+        
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle($sheetTitle);
         
-        // Set headers with styling
-        $this->setHeaders($sheet, $headers);
+        $sheet->setTitle('Ratings Report');
         
-        // Add data rows
-        $this->addDataRows($sheet, $data, count($headers));
-        
-        // Auto-size columns
-        $this->autoSizeColumns($sheet, count($headers));
-        
-        // Save file
-        $path = 'exports/' . $filename . '_' . date('Y-m-d_His') . '.xlsx';
-        $fullPath = storage_path('app/' . $path);
-        
-        $writer = new Xlsx($spreadsheet);
-        $writer->save($fullPath);
-        
-        return $path;
-    }
-    
-    public function exportUnitsToExcel(Collection $units): string
-    {
-        $headers = ['ID', 'Name', 'Type', 'Officer Name', 'Location', 'Avg Rating', 'Total Ratings', 'Total Messages', 'Status', 'Created At', 'Updated At'];
-        
-        $data = $units->map(function ($unit) {
-            return [
-                $unit->id,
-                $unit->name,
-                $unit->type,
-                $unit->officer_name,
-                $unit->location,
-                $unit->ratings_avg_rating ?? 0,
-                $unit->ratings_count ?? 0,
-                $unit->messages_count ?? 0,
-                $unit->is_active ? 'Active' : 'Inactive',
-                $unit->created_at->format('Y-m-d H:i:s'),
-                $unit->updated_at->format('Y-m-d H:i:s'),
-            ];
-        })->toArray();
-        
-        return $this->exportToExcel($data, $headers, 'units_export', 'Units');
-    }
-    
-    public function exportRatingsToExcel(Collection $ratings): string
-    {
-        $headers = ['ID', 'Unit Name', 'Rating', 'Reviewer Name', 'Comment', 'Is Approved', 'Approved At', 'Created At'];
-        
-        $data = $ratings->map(function ($rating) {
-            return [
-                $rating->id,
-                $rating->unit->name ?? 'N/A',
-                $rating->rating,
-                $rating->reviewer_name,
-                $rating->comment ?? '',
-                $rating->is_approved ? 'Yes' : ($rating->is_approved === false ? 'No' : 'Pending'),
-                $rating->approved_at ? $rating->approved_at->format('Y-m-d H:i:s') : '',
-                $rating->created_at->format('Y-m-d H:i:s'),
-            ];
-        })->toArray();
-        
-        return $this->exportToExcel($data, $headers, 'ratings_export', 'Ratings');
-    }
-    
-    public function exportUsersToExcel(Collection $users): string
-    {
-        $headers = ['ID', 'Name', 'Email', 'Role', 'Is Active', 'Last Login', 'Created At', 'Updated At'];
-        
-        $data = $users->map(function ($user) {
-            return [
-                $user->id,
-                $user->name,
-                $user->email,
-                ucfirst($user->role),
-                $user->is_active ? 'Yes' : 'No',
-                $user->last_login_at ? $user->last_login_at->format('Y-m-d H:i:s') : 'Never',
-                $user->created_at->format('Y-m-d H:i:s'),
-                $user->updated_at->format('Y-m-d H:i:s'),
-            ];
-        })->toArray();
-        
-        return $this->exportToExcel($data, $headers, 'users_export', 'Users');
-    }
-    
-    public function exportStatisticsToExcel(array $statistics): string
-    {
-        $spreadsheet = new Spreadsheet();
-        
-        // Dashboard Statistics Sheet
-        $dashboardSheet = $spreadsheet->getActiveSheet();
-        $dashboardSheet->setTitle('Dashboard Stats');
-        
-        $this->addStatisticsSheet($dashboardSheet, 'Dashboard Statistics', $statistics['dashboard'] ?? []);
-        
-        // User Statistics Sheet
-        $userSheet = $spreadsheet->createSheet();
-        $userSheet->setTitle('User Stats');
-        $this->addStatisticsSheet($userSheet, 'User Statistics', $statistics['users'] ?? []);
-        
-        // Rating Statistics Sheet
-        $ratingSheet = $spreadsheet->createSheet();
-        $ratingSheet->setTitle('Rating Stats');
-        $this->addStatisticsSheet($ratingSheet, 'Rating Statistics', $statistics['ratings'] ?? []);
-        
-        // Unit Statistics Sheet
-        $unitSheet = $spreadsheet->createSheet();
-        $unitSheet->setTitle('Unit Stats');
-        $this->addStatisticsSheet($unitSheet, 'Unit Statistics', $statistics['units'] ?? []);
-        
-        // Save file
-        $path = 'exports/statistics_export_' . date('Y-m-d_His') . '.xlsx';
-        $fullPath = storage_path('app/' . $path);
-        
-        $writer = new Xlsx($spreadsheet);
-        $writer->save($fullPath);
-        
-        return $path;
-    }
-    
-    private function setHeaders($sheet, array $headers): void
-    {
-        $column = 'A';
-        foreach ($headers as $header) {
-            $sheet->setCellValue($column . '1', $header);
-            
-            // Style header
-            $sheet->getStyle($column . '1')->applyFromArray([
-                'font' => [
-                    'bold' => true,
-                    'color' => ['rgb' => 'FFFFFF'],
-                ],
-                'fill' => [
-                    'fillType' => Fill::FILL_SOLID,
-                    'startColor' => ['rgb' => '3B82F6'],
-                ],
-                'borders' => [
-                    'allBorders' => [
-                        'borderStyle' => Border::BORDER_THIN,
-                        'color' => ['rgb' => '1E40AF'],
-                    ],
-                ],
-                'alignment' => [
-                    'horizontal' => Alignment::HORIZONTAL_CENTER,
-                    'vertical' => Alignment::VERTICAL_CENTER,
-                ],
-            ]);
-            
-            $column++;
-        }
-    }
-    
-    private function addDataRows($sheet, array $data, int $columnCount): void
-    {
-        $row = 2;
-        
-        foreach ($data as $dataRow) {
-            $column = 'A';
-            
-            for ($i = 0; $i < $columnCount; $i++) {
-                $value = $dataRow[$i] ?? '';
-                $sheet->setCellValue($column . $row, $value);
-                
-                // Alternate row colors
-                if ($row % 2 === 0) {
-                    $sheet->getStyle($column . $row)->applyFromArray([
-                        'fill' => [
-                            'fillType' => Fill::FILL_SOLID,
-                            'startColor' => ['rgb' => 'F9FAFB'],
-                        ],
-                    ]);
-                }
-                
-                // Add borders
-                $sheet->getStyle($column . $row)->applyFromArray([
-                    'borders' => [
-                        'allBorders' => [
-                            'borderStyle' => Border::BORDER_THIN,
-                            'color' => ['rgb' => 'E5E7EB'],
-                        ],
-                    ],
-                ]);
-                
-                $column++;
-            }
-            
-            $row++;
-        }
-    }
-    
-    private function autoSizeColumns($sheet, int $columnCount): void
-    {
-        for ($i = 0; $i < $columnCount; $i++) {
-            $column = chr(65 + $i); // A, B, C, etc.
-            $sheet->getColumnDimension($column)->setAutoSize(true);
-        }
-    }
-    
-    private function addStatisticsSheet($sheet, string $title, array $statistics): void
-    {
-        $sheet->setCellValue('A1', $title);
-        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
-        $sheet->mergeCells('A1:C1');
-        
-        $row = 3;
-        foreach ($statistics as $key => $value) {
-            $sheet->setCellValue('A' . $row, ucfirst(str_replace('_', ' ', $key)));
-            $sheet->setCellValue('B' . $row, is_array($value) ? json_encode($value) : $value);
-            
-            // Style
-            $sheet->getStyle('A' . $row . ':B' . $row)->applyFromArray([
-                'borders' => [
-                    'allBorders' => [
-                        'borderStyle' => Border::BORDER_THIN,
-                        'color' => ['rgb' => 'E5E7EB'],
-                    ],
-                ],
-            ]);
-            
-            $row++;
-        }
-        
-        // Auto-size columns
-        $sheet->getColumnDimension('A')->setWidth(30);
-        $sheet->getColumnDimension('B')->setWidth(40);
-    }
-    
-    public function generateDownloadResponse(string $filePath, string $filename = null)
-    {
-        if (!Storage::disk('local')->exists($filePath)) {
-            throw new \Exception('Excel file not found');
-        }
-        
-        $filename = $filename ?? basename($filePath);
-        
-        return response()->download(
-            storage_path('app/' . $filePath),
-            $filename,
-            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
-        )->deleteFileAfterSend(true);
-    }
-    
-    public function createTemplate(string $type): string
-    {
-        $templates = [
-            'units' => [
-                'headers' => ['Name', 'Type', 'Officer Name', 'Location', 'Description', 'Contact Email', 'Contact Phone', 'Working Hours', 'Is Active'],
-                'sample_data' => [
-                    ['IT Department', 'Department', 'John Doe', 'Building A', 'IT Support Department', 'it@example.com', '08123456789', '08:00-17:00', '1'],
-                ],
-            ],
-            'users' => [
-                'headers' => ['Name', 'Email', 'Password', 'Role', 'Is Active'],
-                'sample_data' => [
-                    ['Jane Smith', 'jane@example.com', 'password123', 'reviewer', '1'],
-                ],
-            ],
-            'ratings' => [
-                'headers' => ['Unit ID', 'Rating (1-5)', 'Reviewer Name', 'Comment', 'Is Anonymous'],
-                'sample_data' => [
-                    ['1', '5', 'John Doe', 'Excellent service!', '0'],
-                ],
-            ],
+        $headers = [
+            'ID', 'Unit', 'Tanggal', 'IP Address', 
+            'Komentar', 'Status', 'Rata-rata'
         ];
         
-        $template = $templates[$type] ?? null;
-        if (!$template) {
-            throw new \Exception("Template type '{$type}' not found");
+        $sheet->fromArray([$headers], null, 'A1');
+        
+        $row = 2;
+        foreach ($ratings as $rating) {
+            $average = $rating->rata_rata ?? 0;
+            
+            $sheet->fromArray([
+                [
+                    $rating->id,
+                    $rating->unit->nama_unit ?? '-',
+                    $rating->created_at->format('d/m/Y H:i'),
+                    $rating->visitor_ip,
+                    $rating->komentar ?? '-',
+                    $rating->status,
+                    round($average, 1)
+                ]
+            ], null, "A{$row}");
+            
+            $row++;
         }
         
-        return $this->exportToExcel(
-            $template['sample_data'],
-            $template['headers'],
-            $type . '_template',
-            'Template'
-        );
+        $this->applyStyles($sheet, count($ratings));
+        
+        $filename = 'ratings-report-' . date('Y-m-d-His') . '.xlsx';
+        $path = Storage::path('exports/' . $filename);
+        
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($path);
+        
+        return $path;
+    }
+    
+    public function exportUnits(array $filters = []): string
+    {
+        $query = Unit::withCount(['ratings', 'visits', 'employees']);
+        
+        if (isset($filters['jenis'])) {
+            $query->where('jenis_unit', $filters['jenis']);
+        }
+        
+        $units = $query->orderBy('nama_unit')->get();
+        
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        
+        $sheet->setTitle('Units Report');
+        
+        $headers = [
+            'Kode Unit', 'Nama Unit', 'Jenis', 'Lokasi', 
+            'Status', 'Total Rating', 'Total Kunjungan', 'Total Pekerja',
+            'Jam Operasional', 'Kapasitas'
+        ];
+        
+        $sheet->fromArray([$headers], null, 'A1');
+        
+        $row = 2;
+        foreach ($units as $unit) {
+            $operational = '';
+            if ($unit->jam_buka && $unit->jam_tutup) {
+                $buka = Carbon::parse($unit->jam_buka)->format('H:i');
+                $tutup = Carbon::parse($unit->jam_tutup)->format('H:i');
+                $operational = "{$buka} - {$tutup}";
+            }
+            
+            $sheet->fromArray([
+                [
+                    $unit->kode_unit,
+                    $unit->nama_unit,
+                    $unit->jenis_unit,
+                    $unit->lokasi,
+                    $unit->status_aktif ? 'Aktif' : 'Non-Aktif',
+                    $unit->ratings_count,
+                    $unit->visits_count,
+                    $unit->employees_count,
+                    $operational,
+                    $unit->kapasitas ?? '-'
+                ]
+            ], null, "A{$row}");
+            
+            $row++;
+        }
+        
+        $this->applyStyles($sheet, count($units));
+        
+        $filename = 'units-report-' . date('Y-m-d-His') . '.xlsx';
+        $path = Storage::path('exports/' . $filename);
+        
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($path);
+        
+        return $path;
+    }
+    
+    public function exportVisits(array $filters = []): string
+    {
+        $query = UnitVisit::with('unit');
+        
+        if (isset($filters['unit_id'])) {
+            $query->where('unit_id', $filters['unit_id']);
+        }
+        
+        if (isset($filters['date_from'])) {
+            $query->whereDate('tanggal', '>=', $filters['date_from']);
+        }
+        
+        if (isset($filters['date_to'])) {
+            $query->whereDate('tanggal', '<=', $filters['date_to']);
+        }
+        
+        $visits = $query->orderBy('tanggal', 'desc')->orderBy('waktu_masuk', 'desc')->get();
+        
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        
+        $sheet->setTitle('Visits Report');
+        
+        $headers = [
+            'ID', 'Unit', 'Tanggal', 'Waktu Masuk', 'Waktu Keluar',
+            'Durasi (menit)', 'Session ID'
+        ];
+        
+        $sheet->fromArray([$headers], null, 'A1');
+        
+        $row = 2;
+        foreach ($visits as $visit) {
+            $durasi = $visit->durasi_menit ?? '-';
+            
+            $sheet->fromArray([
+                [
+                    $visit->id,
+                    $visit->unit->nama_unit ?? '-',
+                    $visit->tanggal->format('d/m/Y'),
+                    $visit->waktu_masuk->format('H:i'),
+                    $visit->waktu_keluar ? $visit->waktu_keluar->format('H:i') : '-',
+                    $durasi,
+                    $visit->session_id
+                ]
+            ], null, "A{$row}");
+            
+            $row++;
+        }
+        
+        $this->applyStyles($sheet, count($visits));
+        
+        $filename = 'visits-report-' . date('Y-m-d-His') . '.xlsx';
+        $path = Storage::path('exports/' . $filename);
+        
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($path);
+        
+        return $path;
+    }
+    
+    public function exportReports(array $filters = []): string
+    {
+        $query = Report::with(['unit', 'admin']);
+        
+        if (isset($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+        
+        $reports = $query->orderBy('created_at', 'desc')->get();
+        
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        
+        $sheet->setTitle('Reports Report');
+        
+        $headers = [
+            'ID', 'Unit', 'Judul', 'Tipe', 'Prioritas', 'Status',
+            'Tanggal Dibuat', 'Admin Penanggung', 'Tanggal Ditanggapi'
+        ];
+        
+        $sheet->fromArray([$headers], null, 'A1');
+        
+        $row = 2;
+        foreach ($reports as $report) {
+            $sheet->fromArray([
+                [
+                    $report->id,
+                    $report->unit->nama_unit ?? '-',
+                    $report->judul,
+                    $report->tipe,
+                    $report->prioritas,
+                    $report->status,
+                    $report->created_at->format('d/m/Y H:i'),
+                    $report->admin->nama ?? '-',
+                    $report->ditanggapi_pada ? $report->ditanggapi_pada->format('d/m/Y H:i') : '-'
+                ]
+            ], null, "A{$row}");
+            
+            $row++;
+        }
+        
+        $this->applyStyles($sheet, count($reports));
+        
+        $filename = 'reports-report-' . date('Y-m-d-His') . '.xlsx';
+        $path = Storage::path('exports/' . $filename);
+        
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($path);
+        
+        return $path;
+    }
+    
+    private function applyStyles($sheet, int $dataCount): void
+    {
+        $lastColumn = $sheet->getHighestColumn();
+        $lastRow = $dataCount + 1;
+        
+        $headerRange = "A1:{$lastColumn}1";
+        $dataRange = "A1:{$lastColumn}{$lastRow}";
+        
+        $sheet->getStyle($headerRange)->applyFromArray([
+            'font' => [
+                'bold' => true,
+                'color' => ['rgb' => 'FFFFFF'],
+            ],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '4F46E5'],
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER,
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                ],
+            ],
+        ]);
+        
+        $sheet->getStyle($dataRange)->applyFromArray([
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                ],
+            ],
+            'alignment' => [
+                'vertical' => Alignment::VERTICAL_CENTER,
+            ],
+        ]);
+        
+        foreach (range('A', $lastColumn) as $column) {
+            $sheet->getColumnDimension($column)->setAutoSize(true);
+        }
+        
+        $sheet->getStyle("A2:A{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
     }
 }

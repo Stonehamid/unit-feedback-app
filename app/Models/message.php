@@ -9,25 +9,56 @@ class Message extends Model
 {
     use HasFactory;
 
+    protected $table = 'messages';
+
     protected $fillable = [
         'unit_id',
-        'name',
-        'message',
+        'admin_id',
+        'judul',
+        'pesan',
+        'tipe',
+        'prioritas',
+        'dibaca',
+        'dibaca_pada',
+        'metadata',
     ];
 
-    /**
-     * Get the unit that owns the message
-     */
+    protected $casts = [
+        'metadata' => 'array',
+        'dibaca' => 'boolean',
+        'dibaca_pada' => 'datetime',
+    ];
+
     public function unit()
     {
         return $this->belongsTo(Unit::class);
     }
 
-    /**
-     * Scope untuk pesan terbaru
-     */
-    public function scopeRecent($query, $days = 7)
+    public function admin()
     {
-        return $query->where('created_at', '>=', now()->subDays($days));
+        return $this->belongsTo(User::class, 'admin_id');
+    }
+
+    public function scopeBelumDibaca($query)
+    {
+        return $query->where('dibaca', false);
+    }
+
+    public function scopePrioritasTinggi($query)
+    {
+        return $query->where('prioritas', 'sangat_penting');
+    }
+
+    public function scopeUntukUnit($query, $unitId)
+    {
+        return $query->where('unit_id', $unitId);
+    }
+
+    public function markAsRead()
+    {
+        $this->update([
+            'dibaca' => true,
+            'dibaca_pada' => now(),
+        ]);
     }
 }

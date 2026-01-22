@@ -5,7 +5,7 @@
     $progressColor = $capacity >= 90 ? 'bg-danger' : ($capacity >= 70 ? 'bg-warning' : 'bg-primary');
 
     $statusMap = [
-        'OPEN' => ['label'=>'Open','class'=>'bg-light text-dark'],
+        'OPEN' => ['label'=>'Open','class'=>'bg-success-subtle text-success'],
         'CLOSED' => ['label'=>'Closed','class'=>'bg-danger-subtle text-danger'],
         'FULL' => ['label'=>'Full','class'=>'bg-warning-subtle text-warning']
     ];

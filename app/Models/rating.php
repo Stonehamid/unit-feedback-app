@@ -2,52 +2,76 @@
 
 namespace App\Models;
 
-use Database\Factories\RatingFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Model;
 
 class Rating extends Model
 {
     use HasFactory;
 
+    protected $table = 'ratings';
+
     protected $fillable = [
         'unit_id',
-        'reviewer_name',
-        'rating',
-        'comment',
+        'session_id',
+        'visitor_ip',
+        'user_agent',
+        'komentar',
+        'status',
+        'metadata',
+        'dibalas_pada',
     ];
 
     protected $casts = [
-        'rating' => 'integer',
+        'metadata' => 'array',
+        'dibalas_pada' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
-    /**
-     * Get the unit that owns the rating
-     */
     public function unit()
     {
         return $this->belongsTo(Unit::class);
     }
 
-    /**
-     * Scope untuk rating dengan komentar
-     */
-    public function scopeWithComments($query)
+    public function scores()
     {
-        return $query->whereNotNull('comment')->where('comment', '!=', '');
+        return $this->hasMany(RatingScore::class);
     }
 
-    /**
-     * Scope untuk rating bintang tertentu
-     */
-    public function scopeWithStars($query, $stars)
+    public function session()
     {
-        return $query->where('rating', $stars);
+        return $this->belongsTo(VisitorSession::class, 'session_id', 'session_id');
     }
 
-    protected static function newFactory(): Factory
+    public function scopePending($query)
     {
-        return RatingFactory::new();
+        return $query->where('status', 'pending');
+    }
+
+    public function scopeDibalas($query)
+    {
+        return $query->where('status', 'dibalas');
+    }
+
+    public function scopeUnit($query, $unitId)
+    {
+        return $query->where('unit_id', $unitId);
+    }
+
+    public function scopeHariIni($query)
+    {
+        return $query->whereDate('created_at', today());
+    }
+
+    public function scopeBulanIni($query)
+    {
+        return $query->whereMonth('created_at', now()->month)
+                     ->whereYear('created_at', now()->year);
+    }
+
+    public function getRataRataAttribute()
+    {
+        return $this->scores()->avg('skor');
     }
 }
